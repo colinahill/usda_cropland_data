@@ -1,0 +1,542 @@
+{
+ "_source": "Raster attribute table (VAT) of 2025_30m_cdls.tif, USDA NASS Cropland Data Layer",
+ "_reference": "https://www.nass.usda.gov/Research_and_Science/Cropland/docs/cdl_legend_colors.html",
+ "classes": {
+  "0": {
+   "name": "Background",
+   "color": "#000000"
+  },
+  "1": {
+   "name": "Corn",
+   "color": "#FFD200"
+  },
+  "2": {
+   "name": "Cotton",
+   "color": "#FF2525"
+  },
+  "3": {
+   "name": "Rice",
+   "color": "#00A8E3"
+  },
+  "4": {
+   "name": "Sorghum",
+   "color": "#FF9E0A"
+  },
+  "5": {
+   "name": "Soybeans",
+   "color": "#256F00"
+  },
+  "6": {
+   "name": "Sunflower",
+   "color": "#FFFF00"
+  },
+  "10": {
+   "name": "Peanuts",
+   "color": "#6FA400"
+  },
+  "11": {
+   "name": "Tobacco",
+   "color": "#00AE4A"
+  },
+  "12": {
+   "name": "Sweet Corn",
+   "color": "#DDA40A"
+  },
+  "13": {
+   "name": "Pop or Orn Corn",
+   "color": "#DDA40A"
+  },
+  "14": {
+   "name": "Mint",
+   "color": "#7DD2FF"
+  },
+  "21": {
+   "name": "Barley",
+   "color": "#E1007B"
+  },
+  "22": {
+   "name": "Durum Wheat",
+   "color": "#886153"
+  },
+  "23": {
+   "name": "Spring Wheat",
+   "color": "#D7B56B"
+  },
+  "24": {
+   "name": "Winter Wheat",
+   "color": "#A46F00"
+  },
+  "25": {
+   "name": "Other Small Grains",
+   "color": "#D59EBB"
+  },
+  "26": {
+   "name": "Dbl Crop WinWht/Soybeans",
+   "color": "#6F6F00"
+  },
+  "27": {
+   "name": "Rye",
+   "color": "#AC007B"
+  },
+  "28": {
+   "name": "Oats",
+   "color": "#9F5888"
+  },
+  "29": {
+   "name": "Millet",
+   "color": "#6F0048"
+  },
+  "30": {
+   "name": "Speltz",
+   "color": "#D59EBB"
+  },
+  "31": {
+   "name": "Canola",
+   "color": "#D1FF00"
+  },
+  "32": {
+   "name": "Flaxseed",
+   "color": "#7D99FF"
+  },
+  "33": {
+   "name": "Safflower",
+   "color": "#D5D500"
+  },
+  "34": {
+   "name": "Rape Seed",
+   "color": "#D1FF00"
+  },
+  "35": {
+   "name": "Mustard",
+   "color": "#00AE4A"
+  },
+  "36": {
+   "name": "Alfalfa",
+   "color": "#FFA4E1"
+  },
+  "37": {
+   "name": "Other Hay/Non Alfalfa",
+   "color": "#A4F18B"
+  },
+  "38": {
+   "name": "Camelina",
+   "color": "#00AE4A"
+  },
+  "39": {
+   "name": "Buckwheat",
+   "color": "#D59EBB"
+  },
+  "41": {
+   "name": "Sugarbeets",
+   "color": "#A800E3"
+  },
+  "42": {
+   "name": "Dry Beans",
+   "color": "#A40000"
+  },
+  "43": {
+   "name": "Potatoes",
+   "color": "#6F2500"
+  },
+  "44": {
+   "name": "Other Crops",
+   "color": "#00AE4A"
+  },
+  "45": {
+   "name": "Sugarcane",
+   "color": "#B07DFF"
+  },
+  "46": {
+   "name": "Sweet Potatoes",
+   "color": "#6F2500"
+  },
+  "47": {
+   "name": "Misc Vegs & Fruits",
+   "color": "#FF6666"
+  },
+  "48": {
+   "name": "Watermelons",
+   "color": "#FF6666"
+  },
+  "49": {
+   "name": "Onions",
+   "color": "#FFCC66"
+  },
+  "50": {
+   "name": "Cucumbers",
+   "color": "#FF6666"
+  },
+  "51": {
+   "name": "Chick Peas",
+   "color": "#00AE4A"
+  },
+  "52": {
+   "name": "Lentils",
+   "color": "#00DDAE"
+  },
+  "53": {
+   "name": "Peas",
+   "color": "#53FF00"
+  },
+  "54": {
+   "name": "Tomatoes",
+   "color": "#F1A277"
+  },
+  "55": {
+   "name": "Caneberries",
+   "color": "#FF6666"
+  },
+  "56": {
+   "name": "Hops",
+   "color": "#00AE4A"
+  },
+  "57": {
+   "name": "Herbs",
+   "color": "#7DD2FF"
+  },
+  "58": {
+   "name": "Clover/Wildflowers",
+   "color": "#E8BEFF"
+  },
+  "59": {
+   "name": "Sod/Grass Seed",
+   "color": "#AEFFDD"
+  },
+  "60": {
+   "name": "Switchgrass",
+   "color": "#00AE4A"
+  },
+  "61": {
+   "name": "Fallow/Idle Cropland",
+   "color": "#BEBE77"
+  },
+  "63": {
+   "name": "Forest",
+   "color": "#92CC92"
+  },
+  "64": {
+   "name": "Shrubland",
+   "color": "#C5D59E"
+  },
+  "65": {
+   "name": "Barren",
+   "color": "#CCBEA2"
+  },
+  "66": {
+   "name": "Cherries",
+   "color": "#FF00FF"
+  },
+  "67": {
+   "name": "Peaches",
+   "color": "#FF8EAA"
+  },
+  "68": {
+   "name": "Apples",
+   "color": "#B9004F"
+  },
+  "69": {
+   "name": "Grapes",
+   "color": "#6F4488"
+  },
+  "70": {
+   "name": "Christmas Trees",
+   "color": "#007777"
+  },
+  "71": {
+   "name": "Other Tree Crops",
+   "color": "#B09A6F"
+  },
+  "72": {
+   "name": "Citrus",
+   "color": "#FFFF7D"
+  },
+  "74": {
+   "name": "Pecans",
+   "color": "#B56F5B"
+  },
+  "75": {
+   "name": "Almonds",
+   "color": "#00A482"
+  },
+  "76": {
+   "name": "Walnuts",
+   "color": "#E9D5AE"
+  },
+  "77": {
+   "name": "Pears",
+   "color": "#B09A6F"
+  },
+  "81": {
+   "name": "Clouds/No Data",
+   "color": "#F1F1F1"
+  },
+  "82": {
+   "name": "Developed",
+   "color": "#9A9A9A"
+  },
+  "83": {
+   "name": "Water",
+   "color": "#4A6FA2"
+  },
+  "87": {
+   "name": "Wetlands",
+   "color": "#7DB0B0"
+  },
+  "88": {
+   "name": "Nonag/Undefined",
+   "color": "#E8FFBE"
+  },
+  "92": {
+   "name": "Aquaculture",
+   "color": "#00FFFF"
+  },
+  "111": {
+   "name": "Open Water",
+   "color": "#4A6FA2"
+  },
+  "112": {
+   "name": "Perennial Ice/Snow",
+   "color": "#D2E1F8"
+  },
+  "121": {
+   "name": "Developed/Open Space",
+   "color": "#9A9A9A"
+  },
+  "122": {
+   "name": "Developed/Low Intensity",
+   "color": "#9A9A9A"
+  },
+  "123": {
+   "name": "Developed/Med Intensity",
+   "color": "#9A9A9A"
+  },
+  "124": {
+   "name": "Developed/High Intensity",
+   "color": "#9A9A9A"
+  },
+  "131": {
+   "name": "Barren",
+   "color": "#CCBEA2"
+  },
+  "141": {
+   "name": "Deciduous Forest",
+   "color": "#92CC92"
+  },
+  "142": {
+   "name": "Evergreen Forest",
+   "color": "#92CC92"
+  },
+  "143": {
+   "name": "Mixed Forest",
+   "color": "#92CC92"
+  },
+  "152": {
+   "name": "Shrubland",
+   "color": "#C5D59E"
+  },
+  "176": {
+   "name": "Grassland/Pasture",
+   "color": "#E8FFBE"
+  },
+  "190": {
+   "name": "Woody Wetlands",
+   "color": "#7DB0B0"
+  },
+  "195": {
+   "name": "Herbaceous Wetlands",
+   "color": "#7DB0B0"
+  },
+  "204": {
+   "name": "Pistachios",
+   "color": "#00FF8B"
+  },
+  "205": {
+   "name": "Triticale",
+   "color": "#D59EBB"
+  },
+  "206": {
+   "name": "Carrots",
+   "color": "#FF6666"
+  },
+  "207": {
+   "name": "Asparagus",
+   "color": "#FF6666"
+  },
+  "208": {
+   "name": "Garlic",
+   "color": "#FF6666"
+  },
+  "209": {
+   "name": "Cantaloupes",
+   "color": "#FF6666"
+  },
+  "210": {
+   "name": "Prunes",
+   "color": "#FF8EAA"
+  },
+  "211": {
+   "name": "Olives",
+   "color": "#334833"
+  },
+  "212": {
+   "name": "Oranges",
+   "color": "#E36F25"
+  },
+  "213": {
+   "name": "Honeydew Melons",
+   "color": "#FF6666"
+  },
+  "214": {
+   "name": "Broccoli",
+   "color": "#FF6666"
+  },
+  "215": {
+   "name": "Avocados",
+   "color": "#66994B"
+  },
+  "216": {
+   "name": "Peppers",
+   "color": "#FF6666"
+  },
+  "217": {
+   "name": "Pomegranates",
+   "color": "#B09A6F"
+  },
+  "218": {
+   "name": "Nectarines",
+   "color": "#FF8EAA"
+  },
+  "219": {
+   "name": "Greens",
+   "color": "#FF6666"
+  },
+  "220": {
+   "name": "Plums",
+   "color": "#FF8EAA"
+  },
+  "221": {
+   "name": "Strawberries",
+   "color": "#FF6666"
+  },
+  "222": {
+   "name": "Squash",
+   "color": "#FF6666"
+  },
+  "223": {
+   "name": "Apricots",
+   "color": "#FF8EAA"
+  },
+  "224": {
+   "name": "Vetch",
+   "color": "#00AE4A"
+  },
+  "225": {
+   "name": "Dbl Crop WinWht/Corn",
+   "color": "#FFD200"
+  },
+  "226": {
+   "name": "Dbl Crop Oats/Corn",
+   "color": "#FFD200"
+  },
+  "227": {
+   "name": "Lettuce",
+   "color": "#FF6666"
+  },
+  "228": {
+   "name": "Dbl Crop Triticale/Corn",
+   "color": "#FFD200"
+  },
+  "229": {
+   "name": "Pumpkins",
+   "color": "#FF6666"
+  },
+  "230": {
+   "name": "Dbl Crop Lettuce/Durum Wht",
+   "color": "#886153"
+  },
+  "231": {
+   "name": "Dbl Crop Lettuce/Cantaloupe",
+   "color": "#FF6666"
+  },
+  "232": {
+   "name": "Dbl Crop Lettuce/Cotton",
+   "color": "#FF2525"
+  },
+  "233": {
+   "name": "Dbl Crop Lettuce/Barley",
+   "color": "#E1007B"
+  },
+  "234": {
+   "name": "Dbl Crop Durum Wht/Sorghum",
+   "color": "#FF9E0A"
+  },
+  "235": {
+   "name": "Dbl Crop Barley/Sorghum",
+   "color": "#FF9E0A"
+  },
+  "236": {
+   "name": "Dbl Crop WinWht/Sorghum",
+   "color": "#A46F00"
+  },
+  "237": {
+   "name": "Dbl Crop Barley/Corn",
+   "color": "#FFD200"
+  },
+  "238": {
+   "name": "Dbl Crop WinWht/Cotton",
+   "color": "#A46F00"
+  },
+  "239": {
+   "name": "Dbl Crop Soybeans/Cotton",
+   "color": "#256F00"
+  },
+  "240": {
+   "name": "Dbl Crop Soybeans/Oats",
+   "color": "#256F00"
+  },
+  "241": {
+   "name": "Dbl Crop Corn/Soybeans",
+   "color": "#FFD200"
+  },
+  "242": {
+   "name": "Blueberries",
+   "color": "#000099"
+  },
+  "243": {
+   "name": "Cabbage",
+   "color": "#FF6666"
+  },
+  "244": {
+   "name": "Cauliflower",
+   "color": "#FF6666"
+  },
+  "245": {
+   "name": "Celery",
+   "color": "#FF6666"
+  },
+  "246": {
+   "name": "Radishes",
+   "color": "#FF6666"
+  },
+  "247": {
+   "name": "Turnips",
+   "color": "#FF6666"
+  },
+  "248": {
+   "name": "Eggplants",
+   "color": "#FF6666"
+  },
+  "249": {
+   "name": "Gourds",
+   "color": "#FF6666"
+  },
+  "250": {
+   "name": "Cranberries",
+   "color": "#FF6666"
+  },
+  "254": {
+   "name": "Dbl Crop Barley/Soybeans",
+   "color": "#256F00"
+  }
+ }
+}

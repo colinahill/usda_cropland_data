@@ -1,0 +1,44 @@
+[project]
+name = "usda-cropland-data"
+version = "0.1.0"
+description = "End-to-end pipeline: USDA NASS Cropland Data Layer -> Icechunk Zarr store on Source Cooperative"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.13"
+dependencies = [
+    "icechunk>=2.1",
+    "zarr>=3.0",
+    "xarray>=2026.7.0",
+    "rioxarray>=0.22.0",
+    "rasterio>=1.4",
+    "numpy>=2.0",
+    "pydantic>=2.10",
+    "typer>=0.15",
+    "httpx>=0.28",
+    "ipykernel>=7.3.0",
+    "matplotlib>=3.11.1",
+]
+
+[project.scripts]
+usda-cdl = "usda_cdl.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-xdist>=3.6",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/usda_cdl"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
