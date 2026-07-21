@@ -45,9 +45,11 @@ CredsOpt = Annotated[
 def _resolve_storage(store_uri: str | None, account: str | None, credentials_file: str | None):
     if bool(store_uri) == bool(account):
         raise typer.BadParameter("provide exactly one of --store or --source-coop-account")
-    uri = store_uri or store.source_coop_uri(account)
-    log.info("store: %s", uri)
-    return store.storage_from_uri(uri, credentials_file=credentials_file)
+    if account:
+        log.info("store: source coop s3://%s/%s/%s", account, store.PRODUCT_NAME, store.STORE_SUBPATH)
+        return store.source_coop_storage(account, credentials_file=credentials_file)
+    log.info("store: %s", store_uri)
+    return store.storage_from_uri(store_uri, credentials_file=credentials_file)
 
 
 @app.command()

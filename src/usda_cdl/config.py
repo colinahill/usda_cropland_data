@@ -19,6 +19,11 @@ NODATA = 0  # 0 == "Background" class; also the zarr fill_value
 DATA_VAR_NAME = "crop_type"
 APPEND_DIM = "year"
 
+# Bumped only for breaking structural changes (re-chunk, re-grid); also names the
+# store directory (v{DATASET_VERSION}.icechunk) so incompatible versions can be
+# published side by side without breaking existing readers.
+DATASET_VERSION = "0.1.0"
+
 
 class FrozenModel(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -152,7 +157,7 @@ ROOT_ATTRS = {
         "holds the native 10 m product (2024-present)."
     ),
     "dataset_id": "usda-cropland-data-layer",
-    "dataset_version": "0.1.0",
+    "dataset_version": DATASET_VERSION,
     "license": (
         "US Public Domain. The USDA NASS Cropland Data Layer has no copyright "
         "restrictions, is considered public domain, and is free to redistribute; "

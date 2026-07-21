@@ -20,14 +20,44 @@ from pathlib import Path
 
 import icechunk
 
-SOURCE_COOP_BUCKET = "us-west-2.opendata.source.coop"
-SOURCE_COOP_REGION = "us-west-2"
+from . import config
+
+# Source Coop S3-compatible access: bucket = the account name, prefix = the
+# product name. These values (and the region) come from the product's
+# credentials page - that page is the ground truth if they ever change.
+# See https://docs.source.coop/data-upload
+SOURCE_COOP_ENDPOINT = "https://data.source.coop"
+SOURCE_COOP_REGION = "us-east-1"
+SOURCE_COOP_ACCOUNT = "chill"
 PRODUCT_NAME = "usda-cropland-data-layer"
-STORE_SUBPATH = "icechunk"
+# Versioned store directory (community convention, cf. dynamical.org's
+# `<dataset>/v0.2.0.icechunk/`): breaking structural changes get a new
+# v{x.y.z}.icechunk path alongside the old one instead of breaking readers.
+STORE_SUBPATH = f"v{config.DATASET_VERSION}.icechunk"
 
 
-def source_coop_uri(account: str, product: str = PRODUCT_NAME) -> str:
-    return f"s3://{SOURCE_COOP_BUCKET}/{account}/{product}/{STORE_SUBPATH}"
+def source_coop_storage(
+    account: str = SOURCE_COOP_ACCOUNT,
+    product: str = PRODUCT_NAME,
+    *,
+    credentials_file: str | None = None,
+    anonymous: bool = False,
+) -> icechunk.Storage:
+    """Icechunk storage for the Source Coop product (bucket=account, prefix=product)."""
+    kwargs: dict = {
+        "bucket": account,
+        "prefix": f"{product}/{STORE_SUBPATH}",
+        "region": SOURCE_COOP_REGION,
+        "endpoint_url": SOURCE_COOP_ENDPOINT,
+        "force_path_style": True,
+    }
+    if anonymous:
+        kwargs["anonymous"] = True
+    elif credentials_file:
+        kwargs["get_credentials"] = _refreshable_credentials(credentials_file)
+    else:
+        kwargs["from_env"] = True
+    return icechunk.s3_storage(**kwargs)
 
 
 def _refreshable_credentials(credentials_file: str):

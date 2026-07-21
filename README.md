@@ -39,7 +39,8 @@ make backfill-10m                        # ingest 2024-2025 (add CLEANUP=1 to de
 ```
 
 Target a different store with `STORE=s3://bucket/prefix` or the Source Coop product with
-`ACCOUNT=<account>`. The underlying CLI is available directly as `uv run usda-cdl`:
+`ACCOUNT=chill` (the Source Coop account). The underlying CLI is available directly as
+`uv run usda-cdl`:
 
 ```bash
 uv run usda-cdl init-store --store ./cdl_store_local
@@ -60,27 +61,26 @@ Re-running a year is idempotent. `--cleanup` deletes source files after each yea
 
 ## Publishing to Source Coop
 
-1. Create the data product `usda-cropland-data-layer` on [source.coop](https://source.coop)
-   (requires approved publishing access; product starts Unlisted).
-2. On the product page: Product Contents → lock icon → **View Credentials** → export as
-   environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
-   `AWS_SESSION_TOKEN`), or save the JSON form to a file.
-3. Run the pipeline against the product prefix:
+See the official [data upload docs](https://docs.source.coop/data-upload).
+
+1. Create the data product `usda-cropland-data-layer` on [source.coop](https://source.coop).
+2. Get the product's temporary credentials (product page → Product Contents → lock icon →
+   **View Credentials**) and export them:
 
 ```bash
 export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_SESSION_TOKEN=...
-make init-store   ACCOUNT=<account>
-make backfill-30m ACCOUNT=<account>
-make backfill-10m ACCOUNT=<account>
-make validate     ACCOUNT=<account> RESOLUTION=30m
+make init-store   ACCOUNT=chill
+make backfill-30m ACCOUNT=chill
+make backfill-10m ACCOUNT=chill
+make validate     ACCOUNT=chill RESOLUTION=30m
 ```
 
-The credentials are temporary. For runs that outlive one credential set, save the JSON
-credentials to a file and pass `--credentials-file creds.json`; the file is re-read on
-each refresh, so overwriting it with fresh credentials keeps a long job writing.
+3. Upload `product/README.md` to the product root, verify anonymous read-back
+   (snippet in that README), then set the product to **Listed**.
 
-4. Upload `product/README.md` to the product root (drag-and-drop or `aws s3 cp`), verify
-   anonymous read-back (snippet in that README), then flip the product to **Listed**.
+For runs that outlive one credential set, save the JSON credential export to a file and
+pass `CREDS_FILE=creds.json` — it is re-read on refresh, so overwrite it with fresh
+credentials to keep a long job writing.
 
 ## Reading the published dataset
 

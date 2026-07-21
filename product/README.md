@@ -6,7 +6,7 @@ cloud-optimized, version-controlled [Icechunk](https://icechunk.io) Zarr store.
 
 ## Contents
 
-One Icechunk repository at `icechunk/` with two groups:
+One Icechunk repository at `v0.1.0.icechunk/` with two groups:
 
 | group | variable | years | resolution | grid (y × x) |
 |---|---|---|---|---|
@@ -33,10 +33,10 @@ One Icechunk repository at `icechunk/` with two groups:
 import icechunk, xarray as xr
 
 storage = icechunk.s3_storage(
-    bucket="<account>",
-    prefix="usda-cropland-data-layer/icechunk",
+    bucket="chill",
+    prefix="usda-cropland-data-layer/v0.1.0.icechunk",
     endpoint_url="https://data.source.coop",
-    region="us-west-2",
+    region="us-east-1",
     anonymous=True,
     force_path_style=True,
 )
