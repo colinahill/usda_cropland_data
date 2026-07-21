@@ -41,10 +41,8 @@ storage = icechunk.s3_storage(
     force_path_style=True,
 )
 repo = icechunk.Repository.open(storage)
-session = repo.readonly_session("main")   # or tag="30m-2025" for a pinned version
-
+session = repo.readonly_session("main")
 ds = xr.open_zarr(session.store, group="30m")
-corn_2025 = ds.crop_type.sel(year=2025) == 1   # 1 = Corn (see ds.crop_type.attrs["class_names"])
 ```
 
 Select an area of interest in projected coordinates (or transform lon/lat with pyproj),
