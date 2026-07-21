@@ -1,4 +1,4 @@
-# USDA NASS Cropland Data Layer (CDL
+# USDA NASS Cropland Data Layer (CDL)
 
 Annual crop-specific land cover classification of the conterminous United States,
 produced by the USDA National Agricultural Statistics Service (NASS), reformatted into a
@@ -97,7 +97,9 @@ Online Links: https://croplandcros.scinet.usda.gov/
 Source files are the official national GeoTIFF zips from
 [NASS Research and Science](https://www.nass.usda.gov/Research_and_Science/Cropland/Release/index.php).
 Pixel values are bit-identical to the source rasters (validated by sampled comparison at
-ingest). Processing code (MIT licensed): https://github.com/colinahill/usda_cropland_data
+ingest). 
+
+Processing code (MIT licensed): https://github.com/colinahill/usda_cropland_data
 
 Contact (data producer): USDA NASS Spatial Analysis Research Section,
 SM.NASS.RDD.GIB@usda.gov · [CDL FAQ](https://www.nass.usda.gov/Research_and_Science/Cropland/sarsfaqs2.php)
