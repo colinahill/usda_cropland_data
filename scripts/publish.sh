@@ -42,4 +42,8 @@ echo "uploading mutable 'repo' pointer last"
 aws s3 cp "$STORE/repo" "$DEST/repo" \
     --endpoint-url "$ENDPOINT" --region "$REGION" --only-show-errors
 
+echo "uploading product README"
+aws s3 cp product/README.md "s3://${ACCOUNT}/${PRODUCT}/README.md" \
+    --endpoint-url "$ENDPOINT" --region "$REGION" --only-show-errors
+
 echo "published $DEST"
