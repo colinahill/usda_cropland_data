@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
@@ -27,18 +27,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("usda_cdl")
 
 StoreOpt = Annotated[
-    Optional[str],
+    str | None,
     typer.Option("--store", help="Store target: local path or s3://bucket/prefix"),
 ]
 AccountOpt = Annotated[
-    Optional[str],
-    typer.Option("--source-coop-account", help="Source Coop account; targets the "
-                 f"'{store.PRODUCT_NAME}' product"),
+    str | None,
+    typer.Option("--source-coop-account", help=f"Source Coop account; targets the '{store.PRODUCT_NAME}' product"),
 ]
 CredsOpt = Annotated[
-    Optional[str],
-    typer.Option("--credentials-file", help="JSON credentials file, re-read on refresh "
-                 "(Source Coop 'JSON (SDK)' export format)"),
+    str | None,
+    typer.Option(
+        "--credentials-file", help="JSON credentials file, re-read on refresh (Source Coop 'JSON (SDK)' export format)"
+    ),
 ]
 
 
@@ -88,11 +88,13 @@ def ingest_cmd(
         tif_path, provenance = download.fetch(source, data_dir)
 
         session = repo.writable_session("main")
-        stats = ingest.ingest_year(
-            session, source.resolution, source.year, tif_path, workers=workers
-        )
+        stats = ingest.ingest_year(session, source.resolution, source.year, tif_path, workers=workers)
         ingest.record_year_provenance(
-            session, source.resolution, source.year, provenance | {
+            session,
+            source.resolution,
+            source.year,
+            provenance
+            | {
                 "source_shape": stats["source_shape"],
                 "placement_offset": stats["placement_offset"],
             },
@@ -137,13 +139,15 @@ def validate(
     for source in sources:
         tif = source.tif_path(data_dir)
         results = validate_mod.validate_year(
-            repo, source.resolution, source.year,
-            tif_path=tif if tif.exists() else None, samples=samples,
+            repo,
+            source.resolution,
+            source.year,
+            tif_path=tif if tif.exists() else None,
+            samples=samples,
         )
         for result in results:
             level = logging.INFO if result.passed else logging.ERROR
-            log.log(level, "%s %s: %s", source.name,
-                    "PASS" if result.passed else "FAIL", result.message)
+            log.log(level, "%s %s: %s", source.name, "PASS" if result.passed else "FAIL", result.message)
             failures += not result.passed
     if failures:
         raise typer.Exit(code=1)

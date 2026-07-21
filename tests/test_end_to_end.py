@@ -9,8 +9,8 @@ import rasterio
 import xarray as xr
 import zarr
 
-from usda_cdl import config, ingest, template, validate
 from tests.conftest import TEST_GRID, write_synthetic_tif
+from usda_cdl import config, ingest, template, validate
 
 
 @pytest.fixture
@@ -89,9 +89,7 @@ def test_ingest_rejects_bad_grid(repo, tmp_path):
     import rasterio.transform
 
     with rasterio.open(tif, "r+") as f:
-        f.transform = rasterio.transform.from_origin(
-            TEST_GRID.x_min + 7.0, TEST_GRID.y_max, 30.0, 30.0
-        )
+        f.transform = rasterio.transform.from_origin(TEST_GRID.x_min + 7.0, TEST_GRID.y_max, 30.0, 30.0)
     session = repo.writable_session("main")
     with pytest.raises(ValueError, match="lattice"):
         ingest.ingest_year(session, "30m", 2025, tif)

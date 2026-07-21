@@ -47,8 +47,9 @@ setup: ## Install dependencies (uv sync)
 test: ## Run the test suite
 	uv run pytest -q
 
-lint: ## Lint with ruff
-	uv run ruff check src tests
+lint: ## Fix lint issues and reformat code with ruff
+	uv run ruff check --fix src tests
+	uv run ruff format src tests
 
 init-store: ## Create the icechunk repo and empty 30m/10m group structure
 	$(CLI) init-store $(STORE_FLAGS)

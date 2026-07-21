@@ -1,0 +1,17 @@
+.venv/
+data/
+cdl_store_local/
+
+# credentials (e.g. Source Coop JSON export used with --credentials-file)
+creds*.json
+*credentials*.json
+.env
+.env.*
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+*.egg-info/
+.ipynb_checkpoints/
+*scratch*

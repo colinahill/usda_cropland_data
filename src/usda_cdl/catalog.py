@@ -40,9 +40,7 @@ class SourceFile(BaseModel):
         return self.extract_dir(data_dir) / self.tif_name
 
 
-def source_files(
-    resolution: Resolution, years: list[int] | None = None
-) -> list[SourceFile]:
+def source_files(resolution: Resolution, years: list[int] | None = None) -> list[SourceFile]:
     available = config.YEARS[resolution]
     if years is None:
         years = available

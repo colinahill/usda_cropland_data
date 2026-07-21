@@ -51,9 +51,7 @@ def validate_and_place(src: rasterio.DatasetReader, grid: config.GridSpec) -> Pl
     """Assert the source raster is compatible with the canonical grid."""
     expected_crs = rasterio.crs.CRS.from_epsg(config.EPSG)
     if src.crs != expected_crs:
-        raise ValueError(
-            f"{src.name}: CRS {src.crs} does not match canonical EPSG:{config.EPSG}"
-        )
+        raise ValueError(f"{src.name}: CRS {src.crs} does not match canonical EPSG:{config.EPSG}")
     t = src.transform
     if not (
         math.isclose(t.a, grid.pixel_size, abs_tol=LATTICE_TOL)
@@ -73,12 +71,7 @@ def validate_and_place(src: rasterio.DatasetReader, grid: config.GridSpec) -> Pl
             f"{grid.pixel_size} m lattice anchored at ({grid.x_min}, {grid.y_max})"
         )
     col_off, row_off = round(col_f), round(row_f)
-    if (
-        col_off < 0
-        or row_off < 0
-        or col_off + src.width > grid.width
-        or row_off + src.height > grid.height
-    ):
+    if col_off < 0 or row_off < 0 or col_off + src.width > grid.width or row_off + src.height > grid.height:
         raise ValueError(
             f"{src.name}: extent (offset {row_off},{col_off}, size {src.height}x"
             f"{src.width}) exceeds the canonical {grid.resolution} grid "
@@ -138,8 +131,14 @@ def ingest_year(
     windows = shard_aligned_windows(placement)
     log.info(
         "%s %s: placing %dx%d at offset (%d, %d); %d windows, %d workers",
-        resolution, year, placement.height, placement.width,
-        placement.row_off, placement.col_off, len(windows), workers,
+        resolution,
+        year,
+        placement.height,
+        placement.width,
+        placement.row_off,
+        placement.col_off,
+        len(windows),
+        workers,
     )
 
     target = zarr.open_array(session.store, path=array_path, mode="r+")
@@ -186,9 +185,7 @@ def ingest_year(
     return stats
 
 
-def record_year_provenance(
-    session: Session, resolution: Resolution, year: int, provenance: dict
-) -> None:
+def record_year_provenance(session: Session, resolution: Resolution, year: int, provenance: dict) -> None:
     """Merge per-year provenance (source url, checksum, extent) into group attrs."""
     group = zarr.open_group(session.store, path=resolution, mode="r+")
     per_year = dict(group.attrs.get("source_files", {}))

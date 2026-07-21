@@ -40,19 +40,18 @@ def validate_year(
     session = repo.readonly_session("main")
     results: list[ValidationResult] = []
 
-    arr = zarr.open_array(
-        session.store, path=f"{resolution}/{config.DATA_VAR_NAME}", mode="r"
-    )
+    arr = zarr.open_array(session.store, path=f"{resolution}/{config.DATA_VAR_NAME}", mode="r")
     grid = config.GRIDS[resolution]
     shape_ok = arr.shape[1:] == (grid.height, grid.width)
-    results.append(ValidationResult(
-        "array_shape", shape_ok,
-        f"crop_type shape {arr.shape} vs grid ({grid.height}, {grid.width})",
-    ))
+    results.append(
+        ValidationResult(
+            "array_shape",
+            shape_ok,
+            f"crop_type shape {arr.shape} vs grid ({grid.height}, {grid.width})",
+        )
+    )
 
-    years = zarr.open_array(
-        session.store, path=f"{resolution}/{config.APPEND_DIM}", mode="r"
-    )[:]
+    years = zarr.open_array(session.store, path=f"{resolution}/{config.APPEND_DIM}", mode="r")[:]
     if year not in years:
         results.append(ValidationResult("year_coord", False, f"{year} missing from year coord"))
         return results
@@ -60,21 +59,20 @@ def validate_year(
 
     x = zarr.open_array(session.store, path=f"{resolution}/x", mode="r")
     coord_ok = np.isclose(x[0], grid.x_min + grid.pixel_size / 2)
-    results.append(ValidationResult(
-        "coord_alignment", bool(coord_ok),
-        f"x[0]={x[0]} vs expected {grid.x_min + grid.pixel_size / 2}",
-    ))
+    results.append(
+        ValidationResult(
+            "coord_alignment",
+            bool(coord_ok),
+            f"x[0]={x[0]} vs expected {grid.x_min + grid.pixel_size / 2}",
+        )
+    )
 
     attrs = dict(arr.attrs)
     for key in ("flag_values", "class_names", "class_colors", "grid_mapping"):
-        results.append(ValidationResult(
-            f"attr:{key}", key in attrs, f"crop_type attr '{key}' present"
-        ))
+        results.append(ValidationResult(f"attr:{key}", key in attrs, f"crop_type attr '{key}' present"))
 
     if tif_path is None:
-        results.append(ValidationResult(
-            "source_comparison", True, "skipped (source tif not on disk)"
-        ))
+        results.append(ValidationResult("source_comparison", True, "skipped (source tif not on disk)"))
         return results
 
     rng = np.random.default_rng(seed)
@@ -97,10 +95,13 @@ def validate_year(
             mismatches += int((src_block != store_block).sum())
             checked_px += src_block.size
             nonzero_px += int((src_block != 0).sum())
-        results.append(ValidationResult(
-            "pixel_equality", mismatches == 0,
-            f"{mismatches} mismatched of {checked_px:,} sampled px "
-            f"({nonzero_px:,} non-background) across {samples} windows",
-        ))
+        results.append(
+            ValidationResult(
+                "pixel_equality",
+                mismatches == 0,
+                f"{mismatches} mismatched of {checked_px:,} sampled px "
+                f"({nonzero_px:,} non-background) across {samples} windows",
+            )
+        )
 
     return results

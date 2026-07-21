@@ -27,6 +27,7 @@ def test_crop_type_attrs_cf_consistency():
 def test_read_vat_dbf_matches_bundled():
     vat_path = "data/2025_30m_cdls/2025_30m_cdls.tif.vat.dbf"
     import pathlib
+
     import pytest
 
     if not pathlib.Path(vat_path).exists():

@@ -130,8 +130,7 @@ class EncodingSpec(FrozenModel):
 ENCODING = EncodingSpec()
 
 SOURCE_URL_TEMPLATE = (
-    "https://www.nass.usda.gov/Research_and_Science/Cropland/Release/datasets/"
-    "{year}_{resolution}_cdls.zip"
+    "https://www.nass.usda.gov/Research_and_Science/Cropland/Release/datasets/{year}_{resolution}_cdls.zip"
 )
 
 # Official form from the CDL FAQ / FGDC metadata:
@@ -166,17 +165,13 @@ ROOT_ATTRS = {
     ),
     "contact": "SM.NASS.RDD.GIB@usda.gov",
     "source": SOURCE_URL_TEMPLATE,
-    "source_release_page": (
-        "https://www.nass.usda.gov/Research_and_Science/Cropland/Release/index.php"
-    ),
-    "source_metadata_page": (
-        "https://www.nass.usda.gov/Research_and_Science/Cropland/metadata/meta.php"
-    ),
+    "source_release_page": ("https://www.nass.usda.gov/Research_and_Science/Cropland/Release/index.php"),
+    "source_metadata_page": ("https://www.nass.usda.gov/Research_and_Science/Cropland/metadata/meta.php"),
     "source_faq_page": "https://www.nass.usda.gov/Research_and_Science/Cropland/sarsfaqs2.php",
     "croplandcros_url": "https://croplandcros.scinet.usda.gov/",
     "references": (
         'Z. Li, R. Mueller, Z. Yang, D. Johnson and P. Willis, "Cloud-Powered '
-        'Agricultural Mapping: A Revolution Toward 10m Resolution Cropland Data '
+        "Agricultural Mapping: A Revolution Toward 10m Resolution Cropland Data "
         'Layers," IGARSS 2024 - 2024 IEEE International Geoscience and Remote Sensing '
         "Symposium, Athens, Greece, 2024, pp. 4081-4084, "
         "doi:10.1109/IGARSS53475.2024.10641079"

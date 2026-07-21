@@ -60,9 +60,7 @@ def read_vat_dbf(path: str | Path) -> dict[int, dict[str, str]]:
             code = int(vals["Value"])
             classes[code] = {
                 "name": vals["Class_Name"],
-                "color": "#{:02X}{:02X}{:02X}".format(
-                    int(vals["Red"]), int(vals["Green"]), int(vals["Blue"])
-                ),
+                "color": "#{:02X}{:02X}{:02X}".format(int(vals["Red"]), int(vals["Green"]), int(vals["Blue"])),
             }
     return classes
 

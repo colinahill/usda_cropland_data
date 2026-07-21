@@ -39,9 +39,16 @@ def write_synthetic_tif(path, *, width=64, height=48, col_off=10, row_off=20, se
         TEST_GRID.x_min + col_off * 30.0, TEST_GRID.y_max - row_off * 30.0, 30.0, 30.0
     )
     with rasterio.open(
-        path, "w", driver="GTiff", width=width, height=height, count=1,
-        dtype="uint8", crs=rasterio.crs.CRS.from_epsg(config.EPSG),
-        transform=transform, nodata=0,
+        path,
+        "w",
+        driver="GTiff",
+        width=width,
+        height=height,
+        count=1,
+        dtype="uint8",
+        crs=rasterio.crs.CRS.from_epsg(config.EPSG),
+        transform=transform,
+        nodata=0,
     ) as dst:
         dst.write(data, 1)
     return data

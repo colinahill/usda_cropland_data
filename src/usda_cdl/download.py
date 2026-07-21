@@ -52,7 +52,11 @@ def download_zip(source: SourceFile, data_dir: Path, *, force: bool = False) -> 
                 delay = _backoff(attempt)
                 log.warning(
                     "download attempt %d/%d for %s failed (%s); retrying in %.0fs",
-                    attempt + 1, MAX_ATTEMPTS, source.url, exc, delay,
+                    attempt + 1,
+                    MAX_ATTEMPTS,
+                    source.url,
+                    exc,
+                    delay,
                 )
                 time.sleep(delay)
         raise RuntimeError("unreachable")
@@ -61,21 +65,21 @@ def download_zip(source: SourceFile, data_dir: Path, *, force: bool = False) -> 
 
 
 def _stream_download(url: str, dest: Path) -> None:
-    with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(30.0, read=120.0)) as client:
-        with client.stream("GET", url) as resp:
-            if resp.status_code in RETRYABLE_STATUS:
-                raise httpx.HTTPStatusError(
-                    f"HTTP {resp.status_code}", request=resp.request, response=resp
-                )
-            resp.raise_for_status()
-            expected = int(resp.headers.get("Content-Length", 0))
-            written = 0
-            with open(dest, "wb") as f:
-                for chunk in resp.iter_bytes(chunk_size=1 << 20):
-                    f.write(chunk)
-                    written += len(chunk)
-            if expected and written != expected:
-                raise OSError(f"short read: got {written} of {expected} bytes for {url}")
+    with (
+        httpx.Client(follow_redirects=True, timeout=httpx.Timeout(30.0, read=120.0)) as client,
+        client.stream("GET", url) as resp,
+    ):
+        if resp.status_code in RETRYABLE_STATUS:
+            raise httpx.HTTPStatusError(f"HTTP {resp.status_code}", request=resp.request, response=resp)
+        resp.raise_for_status()
+        expected = int(resp.headers.get("Content-Length", 0))
+        written = 0
+        with open(dest, "wb") as f:
+            for chunk in resp.iter_bytes(chunk_size=1 << 20):
+                f.write(chunk)
+                written += len(chunk)
+        if expected and written != expected:
+            raise OSError(f"short read: got {written} of {expected} bytes for {url}")
 
 
 def extract_zip(source: SourceFile, data_dir: Path) -> Path:
