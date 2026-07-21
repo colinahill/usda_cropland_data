@@ -14,6 +14,7 @@ Examples:
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -87,8 +88,16 @@ def ingest_cmd(
     data_dir: Annotated[Path, typer.Option(help="download/extract cache dir")] = Path("data"),
     workers: Annotated[int, typer.Option()] = 8,
     cleanup: Annotated[bool, typer.Option(help="delete source files after ingest")] = False,
+    overwrite: Annotated[
+        bool, typer.Option("--overwrite", help="re-ingest years that are already in the store without asking")
+    ] = False,
 ):
-    """Download source zip(s) and write them into the store, one commit per year."""
+    """Download source zip(s) and write them into the store, one commit per year.
+
+    Years already in the store are skipped unless confirmed interactively or
+    --overwrite is passed (a re-ingest commits new data and tags it with a
+    -rN suffix; existing tags are immutable and keep their snapshots).
+    """
     storage = _resolve_storage(store_uri, account, credentials_file, writable=True)
     repo = store.open_repo(storage)
     year_list = catalog.parse_years(years) if years else None
@@ -96,6 +105,24 @@ def ingest_cmd(
 
     for source in sources:
         log.info("=== %s %s ===", source.resolution, source.year)
+
+        existing = _existing_ingest(repo, source.resolution, source.year)
+        if existing and not overwrite:
+            if sys.stdin.isatty() and sys.stdout.isatty():
+                if not typer.confirm(
+                    f"{source.name} is already in the store ({existing}). "
+                    "Re-ingest? (new commit, tag gets a -rN suffix)"
+                ):
+                    log.info("skipping %s", source.name)
+                    continue
+            else:
+                log.warning(
+                    "%s already in the store (%s); skipping. Pass --overwrite to re-ingest.",
+                    source.name,
+                    existing,
+                )
+                continue
+
         tif_path, provenance = download.fetch(source, data_dir)
 
         session = repo.writable_session("main")
@@ -114,19 +141,57 @@ def ingest_cmd(
             f"Ingest {source.resolution} CDL {source.year}",
             metadata=provenance | stats,
         )
-        _retag(repo, f"{source.resolution}-{source.year}", snapshot)
-        log.info("committed %s as %s", source.name, snapshot)
+        tag = _tag_ingest(repo, f"{source.resolution}-{source.year}", snapshot)
+        log.info("committed %s as %s (tag %s)", source.name, snapshot, tag)
 
         if cleanup:
             download.cleanup(source, data_dir)
 
 
-def _retag(repo, tag: str, snapshot: str) -> None:
+def _existing_ingest(repo, resolution: str, year: int) -> str | None:
+    """Return a description of the prior ingest of (resolution, year), if any.
+
+    Checks the ingest tag first, then the group's provenance attrs (covers a
+    commit whose tagging step failed).
+    """
+    import icechunk
+    import zarr
+
+    tag = f"{resolution}-{year}"
     try:
-        repo.create_tag(tag, snapshot_id=snapshot)
-    except Exception:  # tag exists (re-ingest): move it
-        repo.delete_tag(tag)
-        repo.create_tag(tag, snapshot_id=snapshot)
+        snapshot = repo.lookup_tag(tag)
+        return f"tag {tag} -> {snapshot}"
+    except icechunk.IcechunkError:
+        pass
+    group = zarr.open_group(repo.readonly_session("main").store, path=resolution, mode="r")
+    if str(year) in group.attrs.get("source_files", {}):
+        return "provenance record in group attrs"
+    return None
+
+
+def _tag_ingest(repo, base: str, snapshot: str) -> str:
+    """Tag this ingest's snapshot.
+
+    Icechunk tags are immutable and their names can never be reused (even after
+    deletion), so NEVER delete a tag: a re-ingest of the same year gets a
+    ``-r2``/``-r3``... suffix instead, and older tags keep pointing at the
+    snapshots they were created for.
+    """
+    import icechunk
+
+    last_error = None
+    for attempt in range(1, 100):
+        name = base if attempt == 1 else f"{base}-r{attempt}"
+        try:
+            repo.create_tag(name, snapshot_id=snapshot)
+            if attempt > 1:
+                log.warning("tag %s already used; tagged re-ingest as %s", base, name)
+            return name
+        except icechunk.IcechunkError as exc:
+            last_error = exc
+            if "already exist" not in str(exc) and "reuse" not in str(exc):
+                raise
+    raise RuntimeError(f"could not create a tag for {base}") from last_error
 
 
 @app.command()
@@ -163,6 +228,26 @@ def validate(
     if failures:
         raise typer.Exit(code=1)
     log.info("all validations passed")
+
+
+@app.command()
+def publish(
+    store_uri: Annotated[str, typer.Option("--store", help="local icechunk store directory")] = "./cdl_store_local",
+    account: Annotated[str, typer.Option("--source-coop-account")] = store.SOURCE_COOP_ACCOUNT,
+    credentials_file: Annotated[str, typer.Option("--credentials-file")] = "creds.json",
+    overwrite: Annotated[bool, typer.Option("--overwrite", help="wipe the remote store before uploading")] = False,
+    workers: Annotated[int, typer.Option(help="parallel uploads; lower if the proxy stalls")] = 4,
+):
+    """Sync the locally built store to the Source Coop product (repo pointer last)."""
+    from . import publish as publish_mod
+
+    publish_mod.publish(
+        Path(store_uri),
+        account,
+        credentials_file=credentials_file,
+        overwrite=overwrite,
+        workers=workers,
+    )
 
 
 @app.command()

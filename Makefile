@@ -12,11 +12,12 @@ STORE      ?= ./cdl_store_local
 ACCOUNT    ?=
 RESOLUTION ?= 30m
 YEARS      ?=
-WORKERS    ?= 8
+WORKERS    ?=
 SAMPLES    ?= 12
 DATA_DIR   ?= data
 CREDS_FILE ?=
 CLEANUP    ?=
+OVERWRITE  ?=
 
 CLI = uv run usda-cdl
 
@@ -28,8 +29,10 @@ endif
 ifneq ($(CREDS_FILE),)
   STORE_FLAGS += --credentials-file $(CREDS_FILE)
 endif
-YEARS_FLAG   = $(if $(YEARS),--years $(YEARS))
-CLEANUP_FLAG = $(if $(CLEANUP),--cleanup)
+YEARS_FLAG     = $(if $(YEARS),--years $(YEARS))
+CLEANUP_FLAG   = $(if $(CLEANUP),--cleanup)
+OVERWRITE_FLAG = $(if $(OVERWRITE),--overwrite)
+WORKERS_FLAG   = $(if $(WORKERS),--workers $(WORKERS))
 
 .DEFAULT_GOAL := help
 
@@ -56,13 +59,13 @@ init-store: ## Create the icechunk repo and empty 30m/10m group structure
 
 ingest: ## Ingest year(s): make ingest RESOLUTION=30m YEARS=2025 (CLEANUP=1 to delete sources)
 	$(CLI) ingest $(STORE_FLAGS) --resolution $(RESOLUTION) $(YEARS_FLAG) \
-		--data-dir $(DATA_DIR) --workers $(WORKERS) $(CLEANUP_FLAG)
+		--data-dir $(DATA_DIR) $(WORKERS_FLAG) $(CLEANUP_FLAG) $(OVERWRITE_FLAG)
 
 backfill-30m: ## Ingest all 30m years (2008-2025); CLEANUP=1 to delete sources as it goes
-	$(CLI) ingest $(STORE_FLAGS) --resolution 30m --data-dir $(DATA_DIR) --workers $(WORKERS) $(CLEANUP_FLAG)
+	$(CLI) ingest $(STORE_FLAGS) --resolution 30m --data-dir $(DATA_DIR) $(WORKERS_FLAG) $(CLEANUP_FLAG) $(OVERWRITE_FLAG)
 
 backfill-10m: ## Ingest all 10m years (2024-2025); CLEANUP=1 to delete the ~10 GB sources as it goes
-	$(CLI) ingest $(STORE_FLAGS) --resolution 10m --data-dir $(DATA_DIR) --workers $(WORKERS) $(CLEANUP_FLAG)
+	$(CLI) ingest $(STORE_FLAGS) --resolution 10m --data-dir $(DATA_DIR) $(WORKERS_FLAG) $(CLEANUP_FLAG) $(OVERWRITE_FLAG)
 
 validate: ## Verify store contents against source rasters
 	$(CLI) validate $(STORE_FLAGS) --resolution $(RESOLUTION) $(YEARS_FLAG) \
@@ -71,8 +74,9 @@ validate: ## Verify store contents against source rasters
 info: ## Show store structure, tags, and recent snapshots
 	$(CLI) info $(STORE_FLAGS)
 
-publish: ## Sync the locally built store to Source Coop (ACCOUNT=..., CREDS_FILE=creds.json)
-	./scripts/publish.sh $(STORE) $(or $(ACCOUNT),chill) $(or $(CREDS_FILE),creds.json)
+publish: ## Sync the locally built store to Source Coop; OVERWRITE=1 wipes the remote store first
+	$(CLI) publish --store $(STORE) --source-coop-account $(or $(ACCOUNT),chill) \
+		--credentials-file $(or $(CREDS_FILE),creds.json) $(WORKERS_FLAG) $(OVERWRITE_FLAG)
 
 clean: ## Remove the local dev store
 	rm -rf $(STORE)

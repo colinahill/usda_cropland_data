@@ -135,6 +135,31 @@ def test_validate_catches_corruption(repo, synthetic_tif):
     assert not pixel.passed
 
 
+def test_tag_ingest_never_reuses_names(repo, synthetic_tif):
+    from usda_cdl.cli import _existing_ingest, _tag_ingest
+
+    tif, _ = synthetic_tif
+    init(repo)
+    assert _existing_ingest(repo, "30m", 2025) is None
+
+    snapshots = []
+    for i in range(2):
+        session = repo.writable_session("main")
+        ingest.ingest_year(session, "30m", 2025, tif, workers=2)
+        ingest.record_year_provenance(session, "30m", 2025, {"source_url": "test"})
+        snapshots.append(session.commit(f"ingest {i}"))
+
+    # committed but tagging failed -> still detected via provenance attrs
+    assert _existing_ingest(repo, "30m", 2025) == "provenance record in group attrs"
+
+    assert _tag_ingest(repo, "30m-2025", snapshots[0]) == "30m-2025"
+    # re-ingest: same base name must not be deleted/reused, gets a suffix
+    assert _tag_ingest(repo, "30m-2025", snapshots[1]) == "30m-2025-r2"
+    assert repo.lookup_tag("30m-2025") == snapshots[0]
+    assert repo.lookup_tag("30m-2025-r2") == snapshots[1]
+    assert _existing_ingest(repo, "30m", 2025) == f"tag 30m-2025 -> {snapshots[0]}"
+
+
 def test_shard_aligned_windows_cover_exactly():
     placement = ingest.Placement(row_off=20, col_off=10, height=48, width=64)
     windows = ingest.shard_aligned_windows(placement)

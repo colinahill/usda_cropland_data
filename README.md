@@ -65,12 +65,16 @@ See the official [data upload docs](https://docs.source.coop/data-upload).
 
 The Source Coop endpoint (`data.source.coop`) does not support S3 server-side copy,
 which icechunk commits require — so the store is **built locally, then synced up**
-(`scripts/publish.sh` uploads the immutable files first and the mutable `repo` pointer
-last, so readers always see a consistent version).
+(`make publish` uploads the immutable files first and the mutable `repo` pointer
+last, so readers always see a consistent version; `OVERWRITE=1` wipes the remote
+store first, for use after a local rebuild).
 
 1. Create the data product `usda-cropland-data-layer` on [source.coop](https://source.coop).
-2. Save the product's temporary credentials (product page → Product Contents → lock icon
-   → **View Credentials** → JSON) as `creds.json` (gitignored).
+2. Authenticate with the [source-coop CLI](https://github.com/source-cooperative/source-coop-cli)
+   (`brew install source-cooperative/tap/source-coop`, then `source-coop login` — browser
+   OAuth, credentials cached in the OS keyring and picked up automatically). Alternative:
+   save the product page's JSON credential export as `creds.json` (gitignored); an
+   existing `creds.json` takes precedence.
 3. Build locally and publish:
 
 ```bash

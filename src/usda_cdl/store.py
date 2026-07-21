@@ -15,6 +15,8 @@ refresh out-of-band - it is re-read whenever icechunk asks for credentials.
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -31,7 +33,7 @@ from . import config
 # NOT S3 CopyObject (and it ignores If-Match preconditions), so icechunk commits
 # fail against it with "service error" at update_repo_info. Reads work fine.
 # Publishing therefore builds the store locally and syncs it up with
-# scripts/publish.sh (immutable files first, mutable "repo" pointer last).
+# `usda-cdl publish` (immutable files first, mutable "repo" pointer last).
 SOURCE_COOP_ENDPOINT = "https://data.source.coop"
 SOURCE_COOP_REGION = "us-east-1"
 SOURCE_COOP_ACCOUNT = "chill"
@@ -59,40 +61,68 @@ def source_coop_storage(
     }
     if anonymous:
         kwargs["anonymous"] = True
-    elif credentials_file:
-        kwargs["get_credentials"] = _refreshable_credentials(credentials_file)
+    elif credentials_file or shutil.which("source-coop"):
+        kwargs["get_credentials"] = _RefreshableCredentials(credentials_file)
     else:
         kwargs["from_env"] = True
     return icechunk.s3_storage(**kwargs)
 
 
-class _RefreshableCredentials:
-    """get_credentials callable that re-reads a JSON creds file on each refresh.
+def load_credentials(credentials_file: str | None = None) -> dict[str, str | None]:
+    """Source Coop credentials, in preference order:
 
-    File format (matches Source Coop's "JSON (SDK)" credential export):
-    {"aws_access_key_id": ..., "aws_secret_access_key": ..., "aws_session_token": ...}
-    Refresh the file contents before the old credentials expire and long jobs
-    keep writing without interruption.
+    1. ``credentials_file`` if given and present - Source Coop's "JSON (SDK)"
+       export: {"aws_access_key_id": ..., "aws_secret_access_key": ..., ...}
+    2. the ``source-coop`` CLI's cached browser login (``source-coop login``),
+       which prints AWS credential_process JSON.
+    """
+    if credentials_file and Path(credentials_file).exists():
+        creds = json.loads(Path(credentials_file).read_text())
+        return {
+            "access_key_id": creds["aws_access_key_id"],
+            "secret_access_key": creds["aws_secret_access_key"],
+            "session_token": creds.get("aws_session_token"),
+        }
+    cli = shutil.which("source-coop")
+    if cli is None:
+        raise RuntimeError(
+            "No Source Coop credentials: pass --credentials-file with the product's JSON "
+            "credential export, or install the source-coop CLI "
+            "(brew install source-cooperative/tap/source-coop) and run `source-coop login`."
+        )
+    proc = subprocess.run([cli, "creds", "--format", "credential-process"], capture_output=True, text=True)
+    try:
+        creds = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        # the CLI exits 0 even without cached credentials; detect via non-JSON output
+        message = (proc.stdout + proc.stderr).strip() or "no output"
+        raise RuntimeError(f"source-coop creds failed ({message}); run `source-coop login`") from None
+    return {
+        "access_key_id": creds["AccessKeyId"],
+        "secret_access_key": creds["SecretAccessKey"],
+        "session_token": creds.get("SessionToken"),
+    }
+
+
+class _RefreshableCredentials:
+    """get_credentials callable for icechunk that re-resolves credentials on
+    each refresh, via load_credentials (JSON file or source-coop CLI cache).
 
     A module-level class (rather than a closure) because icechunk pickles the
     callable.
     """
 
-    def __init__(self, credentials_file: str):
+    def __init__(self, credentials_file: str | None):
         self.credentials_file = credentials_file
 
     def __call__(self) -> icechunk.S3StaticCredentials:
-        creds = json.loads(Path(self.credentials_file).read_text())
+        creds = load_credentials(self.credentials_file)
         return icechunk.S3StaticCredentials(
-            access_key_id=creds["aws_access_key_id"],
-            secret_access_key=creds["aws_secret_access_key"],
-            session_token=creds.get("aws_session_token"),
+            access_key_id=creds["access_key_id"],
+            secret_access_key=creds["secret_access_key"],
+            session_token=creds["session_token"],
             expires_after=datetime.now(UTC) + timedelta(minutes=15),
         )
-
-
-def _refreshable_credentials(credentials_file: str) -> _RefreshableCredentials:
-    return _RefreshableCredentials(credentials_file)
 
 
 def storage_from_uri(
@@ -112,7 +142,7 @@ def storage_from_uri(
         if anonymous:
             kwargs["anonymous"] = True
         elif credentials_file:
-            kwargs["get_credentials"] = _refreshable_credentials(credentials_file)
+            kwargs["get_credentials"] = _RefreshableCredentials(credentials_file)
         else:
             kwargs["from_env"] = True
         return icechunk.s3_storage(**kwargs)
