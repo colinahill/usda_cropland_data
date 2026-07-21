@@ -26,6 +26,12 @@ from . import config
 # product name. These values (and the region) come from the product's
 # credentials page - that page is the ground truth if they ever change.
 # See https://docs.source.coop/data-upload
+#
+# NOTE (verified 2026-07-21): data.source.coop supports plain GET/PUT/DELETE but
+# NOT S3 CopyObject (and it ignores If-Match preconditions), so icechunk commits
+# fail against it with "service error" at update_repo_info. Reads work fine.
+# Publishing therefore builds the store locally and syncs it up with
+# scripts/publish.sh (immutable files first, mutable "repo" pointer last).
 SOURCE_COOP_ENDPOINT = "https://data.source.coop"
 SOURCE_COOP_REGION = "us-east-1"
 SOURCE_COOP_ACCOUNT = "chill"
@@ -60,17 +66,23 @@ def source_coop_storage(
     return icechunk.s3_storage(**kwargs)
 
 
-def _refreshable_credentials(credentials_file: str):
-    """Build a get_credentials callable that re-reads a JSON creds file.
+class _RefreshableCredentials:
+    """get_credentials callable that re-reads a JSON creds file on each refresh.
 
     File format (matches Source Coop's "JSON (SDK)" credential export):
     {"aws_access_key_id": ..., "aws_secret_access_key": ..., "aws_session_token": ...}
     Refresh the file contents before the old credentials expire and long jobs
     keep writing without interruption.
+
+    A module-level class (rather than a closure) because icechunk pickles the
+    callable.
     """
 
-    def get_credentials() -> icechunk.S3StaticCredentials:
-        creds = json.loads(Path(credentials_file).read_text())
+    def __init__(self, credentials_file: str):
+        self.credentials_file = credentials_file
+
+    def __call__(self) -> icechunk.S3StaticCredentials:
+        creds = json.loads(Path(self.credentials_file).read_text())
         return icechunk.S3StaticCredentials(
             access_key_id=creds["aws_access_key_id"],
             secret_access_key=creds["aws_secret_access_key"],
@@ -78,7 +90,9 @@ def _refreshable_credentials(credentials_file: str):
             expires_after=datetime.now(UTC) + timedelta(minutes=15),
         )
 
-    return get_credentials
+
+def _refreshable_credentials(credentials_file: str) -> _RefreshableCredentials:
+    return _RefreshableCredentials(credentials_file)
 
 
 def storage_from_uri(

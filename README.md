@@ -63,24 +63,27 @@ Re-running a year is idempotent. `--cleanup` deletes source files after each yea
 
 See the official [data upload docs](https://docs.source.coop/data-upload).
 
+The Source Coop endpoint (`data.source.coop`) does not support S3 server-side copy,
+which icechunk commits require — so the store is **built locally, then synced up**
+(`scripts/publish.sh` uploads the immutable files first and the mutable `repo` pointer
+last, so readers always see a consistent version).
+
 1. Create the data product `usda-cropland-data-layer` on [source.coop](https://source.coop).
-2. Get the product's temporary credentials (product page → Product Contents → lock icon →
-   **View Credentials**) and export them:
+2. Save the product's temporary credentials (product page → Product Contents → lock icon
+   → **View Credentials** → JSON) as `creds.json` (gitignored).
+3. Build locally and publish:
 
 ```bash
-export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_SESSION_TOKEN=...
-make init-store   ACCOUNT=chill
-make backfill-30m ACCOUNT=chill
-make backfill-10m ACCOUNT=chill
-make validate     ACCOUNT=chill RESOLUTION=30m
+make init-store backfill-30m backfill-10m   # build the full local store
+make publish ACCOUNT=chill CREDS_FILE=creds.json
+make validate ACCOUNT=chill RESOLUTION=30m  # reads back through data.source.coop
 ```
 
-3. Upload `product/README.md` to the product root, verify anonymous read-back
-   (snippet in that README), then set the product to **Listed**.
+4. Upload `product/README.md` to the product root, verify the anonymous read snippet in
+   that README works, then set the product to **Listed**.
 
-For runs that outlive one credential set, save the JSON credential export to a file and
-pass `CREDS_FILE=creds.json` — it is re-read on refresh, so overwrite it with fresh
-credentials to keep a long job writing.
+Yearly updates are the same flow: ingest the new year locally, `make publish` again —
+sync only uploads the new objects.
 
 ## Reading the published dataset
 

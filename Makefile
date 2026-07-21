@@ -33,7 +33,7 @@ CLEANUP_FLAG = $(if $(CLEANUP),--cleanup)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup test lint init-store ingest backfill-30m backfill-10m validate info clean
+.PHONY: help setup test lint init-store ingest backfill-30m backfill-10m validate info publish clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[1m%-14s\033[0m %s\n", $$1, $$2}'
@@ -70,6 +70,9 @@ validate: ## Verify store contents against source rasters
 
 info: ## Show store structure, tags, and recent snapshots
 	$(CLI) info $(STORE_FLAGS)
+
+publish: ## Sync the locally built store to Source Coop (ACCOUNT=..., CREDS_FILE=creds.json)
+	./scripts/publish.sh $(STORE) $(or $(ACCOUNT),chill) $(or $(CREDS_FILE),creds.json)
 
 clean: ## Remove the local dev store
 	rm -rf $(STORE)

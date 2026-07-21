@@ -42,10 +42,19 @@ CredsOpt = Annotated[
 ]
 
 
-def _resolve_storage(store_uri: str | None, account: str | None, credentials_file: str | None):
+def _resolve_storage(
+    store_uri: str | None, account: str | None, credentials_file: str | None, *, writable: bool = False
+):
     if bool(store_uri) == bool(account):
         raise typer.BadParameter("provide exactly one of --store or --source-coop-account")
     if account:
+        if writable:
+            # data.source.coop does not support S3 CopyObject, which icechunk
+            # commits require - direct writes fail at commit time.
+            raise typer.BadParameter(
+                "The Source Coop endpoint does not support icechunk commits. "
+                "Build the store locally (--store ./cdl_store_local) and upload it with `make publish`."
+            )
         log.info("store: source coop s3://%s/%s/%s", account, store.PRODUCT_NAME, store.STORE_SUBPATH)
         return store.source_coop_storage(account, credentials_file=credentials_file)
     log.info("store: %s", store_uri)
@@ -60,7 +69,7 @@ def init_store(
     resolutions: Annotated[str, typer.Option(help="comma-separated groups")] = "30m,10m",
 ):
     """Create the icechunk repo and empty group structure."""
-    storage = _resolve_storage(store_uri, account, credentials_file)
+    storage = _resolve_storage(store_uri, account, credentials_file, writable=True)
     repo = store.open_repo(storage, create=True)
     session = repo.writable_session("main")
     res_list = [r.strip() for r in resolutions.split(",")]
@@ -80,7 +89,7 @@ def ingest_cmd(
     cleanup: Annotated[bool, typer.Option(help="delete source files after ingest")] = False,
 ):
     """Download source zip(s) and write them into the store, one commit per year."""
-    storage = _resolve_storage(store_uri, account, credentials_file)
+    storage = _resolve_storage(store_uri, account, credentials_file, writable=True)
     repo = store.open_repo(storage)
     year_list = catalog.parse_years(years) if years else None
     sources = catalog.source_files(resolution, year_list)  # type: ignore[arg-type]
