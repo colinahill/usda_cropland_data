@@ -83,18 +83,19 @@ GRID_30M = GridSpec(
     height=105_432,
 )
 
-# 10m: union of the verified 2024 grid (UL -2356085, 3172595, 461431 x 289567,
-# from the official FGDC metadata) and the extent implied by the 2025 30m file
-# (whose 10m parent should share its outer bounds, on the 10m lattice).
+# 10m: union of the 2024 and 2025 grids, both verified from the actual GeoTIFFs
+# (2024: 289567 x 461431 at UL -2356085, 3172595; 2025: 316295 x 480509 at
+# UL -2417815, 3321235, which fully contains 2024). Note the 2025 10m grid does
+# NOT share corners with the 2025 30m grid - never infer one from the other.
 # Ingest asserts every source file fits this grid and sits on its lattice; if a
 # future year exceeds it, ingest fails loudly and this spec must be extended.
 GRID_10M = GridSpec(
     resolution="10m",
     pixel_size=10.0,
-    x_min=-2_417_835.0,
-    y_max=3_321_225.0,
-    width=480_513,
-    height=316_296,
+    x_min=-2_417_815.0,
+    y_max=3_321_235.0,
+    width=480_509,
+    height=316_295,
 )
 
 GRIDS: dict[Resolution, GridSpec] = {"30m": GRID_30M, "10m": GRID_10M}

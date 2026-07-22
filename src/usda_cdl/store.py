@@ -68,28 +68,20 @@ def source_coop_storage(
     return icechunk.s3_storage(**kwargs)
 
 
-def load_credentials(credentials_file: str | None = None) -> dict[str, str | None]:
-    """Source Coop credentials, in preference order:
+DEFAULT_CREDS_FILE = "creds.json"
 
-    1. ``credentials_file`` if given and present - Source Coop's "JSON (SDK)"
-       export: {"aws_access_key_id": ..., "aws_secret_access_key": ..., ...}
-    2. the ``source-coop`` CLI's cached browser login (``source-coop login``),
-       which prints AWS credential_process JSON.
-    """
-    if credentials_file and Path(credentials_file).exists():
-        creds = json.loads(Path(credentials_file).read_text())
-        return {
-            "access_key_id": creds["aws_access_key_id"],
-            "secret_access_key": creds["aws_secret_access_key"],
-            "session_token": creds.get("aws_session_token"),
-        }
-    cli = shutil.which("source-coop")
-    if cli is None:
-        raise RuntimeError(
-            "No Source Coop credentials: pass --credentials-file with the product's JSON "
-            "credential export, or install the source-coop CLI "
-            "(brew install source-cooperative/tap/source-coop) and run `source-coop login`."
-        )
+
+def _creds_from_file(path: str) -> dict[str, str | None]:
+    """Source Coop's "JSON (SDK)" credential export format."""
+    creds = json.loads(Path(path).read_text())
+    return {
+        "access_key_id": creds["aws_access_key_id"],
+        "secret_access_key": creds["aws_secret_access_key"],
+        "session_token": creds.get("aws_session_token"),
+    }
+
+
+def _creds_from_cli(cli: str) -> dict[str, str | None]:
     proc = subprocess.run([cli, "creds", "--format", "credential-process"], capture_output=True, text=True)
     try:
         creds = json.loads(proc.stdout)
@@ -101,7 +93,35 @@ def load_credentials(credentials_file: str | None = None) -> dict[str, str | Non
         "access_key_id": creds["AccessKeyId"],
         "secret_access_key": creds["SecretAccessKey"],
         "session_token": creds.get("SessionToken"),
+        "expires_at": creds.get("Expiration"),  # ISO timestamp; lets callers track real expiry
     }
+
+
+def load_credentials(credentials_file: str | None = None) -> dict[str, str | None]:
+    """Source Coop credentials, in preference order:
+
+    1. ``credentials_file`` if explicitly given and present
+    2. the ``source-coop`` CLI's cached browser login (it tracks expiry, so a
+       fresh ``source-coop login`` always wins over a stale export file)
+    3. ``creds.json`` in the working directory
+    """
+    if credentials_file and Path(credentials_file).exists():
+        return _creds_from_file(credentials_file)
+    cli = shutil.which("source-coop")
+    if cli:
+        try:
+            return _creds_from_cli(cli)
+        except RuntimeError:
+            if Path(DEFAULT_CREDS_FILE).exists():
+                return _creds_from_file(DEFAULT_CREDS_FILE)
+            raise
+    if Path(DEFAULT_CREDS_FILE).exists():
+        return _creds_from_file(DEFAULT_CREDS_FILE)
+    raise RuntimeError(
+        "No Source Coop credentials: run `source-coop login` (brew install "
+        "source-cooperative/tap/source-coop), or save the product's JSON credential "
+        f"export as {DEFAULT_CREDS_FILE} / pass --credentials-file."
+    )
 
 
 class _RefreshableCredentials:

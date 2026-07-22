@@ -234,7 +234,7 @@ def validate(
 def publish(
     store_uri: Annotated[str, typer.Option("--store", help="local icechunk store directory")] = "./cdl_store_local",
     account: Annotated[str, typer.Option("--source-coop-account")] = store.SOURCE_COOP_ACCOUNT,
-    credentials_file: Annotated[str, typer.Option("--credentials-file")] = "creds.json",
+    credentials_file: CredsOpt = None,
     overwrite: Annotated[bool, typer.Option("--overwrite", help="wipe the remote store before uploading")] = False,
     workers: Annotated[int, typer.Option(help="parallel uploads; lower if the proxy stalls")] = 4,
 ):

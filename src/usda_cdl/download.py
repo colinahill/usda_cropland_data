@@ -18,6 +18,7 @@ import zipfile
 from pathlib import Path
 
 import httpx
+from tqdm import tqdm
 
 from .catalog import SourceFile
 
@@ -74,10 +75,20 @@ def _stream_download(url: str, dest: Path) -> None:
         resp.raise_for_status()
         expected = int(resp.headers.get("Content-Length", 0))
         written = 0
-        with open(dest, "wb") as f:
+        with (
+            tqdm(
+                total=expected or None,
+                desc=f"downloading {url.rsplit('/', 1)[-1]}",
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as bar,
+            open(dest, "wb") as f,
+        ):
             for chunk in resp.iter_bytes(chunk_size=1 << 20):
                 f.write(chunk)
                 written += len(chunk)
+                bar.update(len(chunk))
         if expected and written != expected:
             raise OSError(f"short read: got {written} of {expected} bytes for {url}")
 
@@ -92,11 +103,18 @@ def extract_zip(source: SourceFile, data_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     log.info("extracting %s -> %s", zip_path, out_dir)
     with zipfile.ZipFile(zip_path) as zf:
-        for member in zf.infolist():
-            # Skip the large .ovr overview pyramids; we read the full-res band only.
-            if member.filename.endswith(".ovr"):
-                continue
-            zf.extract(member, out_dir)
+        # Skip the large .ovr overview pyramids; we read the full-res band only.
+        members = [m for m in zf.infolist() if not m.filename.endswith(".ovr")]
+        with tqdm(
+            total=sum(m.file_size for m in members),
+            desc=f"extracting {zip_path.name}",
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+        ) as bar:
+            for member in members:
+                zf.extract(member, out_dir)
+                bar.update(member.file_size)
     if not tif.exists():
         raise FileNotFoundError(
             f"{source.tif_name} not found in {zip_path}; zip contents: "

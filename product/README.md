@@ -11,7 +11,7 @@ One Icechunk repository at `v0.1.0.icechunk/` with two groups:
 | group | variable | years | resolution | grid (y × x) |
 |---|---|---|---|---|
 | `30m` | `crop_type (year, y, x) uint8` | 2008–2025 | 30 m | 105,432 × 160,171 |
-| `10m` | `crop_type (year, y, x) uint8` | 2024–2025 | 10 m | 316,296 × 480,513 |
+| `10m` | `crop_type (year, y, x) uint8` | 2024–2025 | 10 m | 316,295 × 480,509 |
 
 - CRS: EPSG:5070 (USA Contiguous Albers Equal Area Conic, NAD83); coordinates are pixel
   centres in metres. A CF `spatial_ref` variable carries the WKT and GeoTransform.

@@ -41,7 +41,8 @@ def test_load_credentials_falls_back_to_cli(tmp_path, monkeypatch):
     assert creds["access_key_id"] == "CLIKEY"
 
 
-def test_load_credentials_cli_not_logged_in(monkeypatch):
+def test_load_credentials_cli_not_logged_in(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)  # no creds.json fallback in cwd
     monkeypatch.setattr(store.shutil, "which", lambda _: "/fake/source-coop")
     monkeypatch.setattr(
         store.subprocess,
@@ -53,7 +54,22 @@ def test_load_credentials_cli_not_logged_in(monkeypatch):
         store.load_credentials(None)
 
 
-def test_load_credentials_no_sources(monkeypatch):
+def test_load_credentials_cli_failure_falls_back_to_default_file(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "creds.json").write_text(
+        json.dumps({"aws_access_key_id": "FILEKEY", "aws_secret_access_key": "S", "aws_session_token": "T"})
+    )
+    monkeypatch.setattr(store.shutil, "which", lambda _: "/fake/source-coop")
+    monkeypatch.setattr(
+        store.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(a, 0, stdout="", stderr="Error: Cached credentials have expired."),
+    )
+    assert store.load_credentials(None)["access_key_id"] == "FILEKEY"
+
+
+def test_load_credentials_no_sources(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(store.shutil, "which", lambda _: None)
     with pytest.raises(RuntimeError, match="credentials-file"):
         store.load_credentials(None)

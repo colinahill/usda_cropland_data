@@ -20,6 +20,7 @@ import boto3
 import botocore.session
 from botocore.client import Config
 from botocore.credentials import RefreshableCredentials
+from botocore.exceptions import ClientError
 from tqdm import tqdm
 
 from . import store as store_config
@@ -28,6 +29,12 @@ log = logging.getLogger(__name__)
 
 REPO_POINTER = "repo"  # icechunk's only mutable file
 PRODUCT_README = Path("product/README.md")
+CREDENTIAL_ERROR_CODES = ("ExpiredToken", "InvalidToken", "TokenRefreshRequired", "AccessDenied")
+MAX_UPLOAD_ROUNDS = 5
+
+
+class CredentialError(RuntimeError):
+    """Credentials are dead; needs a human (`source-coop login`), not a retry."""
 
 
 def _creds_metadata(credentials_file: str | None) -> dict:
@@ -38,11 +45,16 @@ def _creds_metadata(credentials_file: str | None) -> dict:
     of failing with ExpiredToken when the original STS credentials lapse.
     """
     creds = store_config.load_credentials(credentials_file)
+    # Prefer the real expiry when the credential source reports one (the
+    # source-coop CLI does); cap at now+30min so re-resolution happens at least
+    # every ~15 minutes (botocore refreshes ~15 min before advertised expiry).
+    cap = datetime.now(UTC) + timedelta(minutes=30)
+    expiry = min(datetime.fromisoformat(creds["expires_at"]), cap) if creds.get("expires_at") else cap
     return {
         "access_key": creds["access_key_id"],
         "secret_key": creds["secret_access_key"],
         "token": creds["session_token"],
-        "expiry_time": (datetime.now(UTC) + timedelta(minutes=15)).isoformat(),
+        "expiry_time": expiry.isoformat(),
     }
 
 
@@ -134,33 +146,66 @@ def publish(
         _delete_remote(s3, bucket, list(remote), workers=workers)
         remote = {}
 
-    uploads = plan_uploads(local_store, remote, prefix)
-    total_bytes = sum(size for _, _, size in uploads)
-    log.info(
-        "uploading %d files (%.1f GB) to s3://%s/%s (%d already up to date)",
-        len(uploads),
-        total_bytes / 1e9,
-        bucket,
-        prefix,
-        sum(1 for p in local_store.rglob("*") if p.is_file()) - 1 - len(uploads),
-    )
-
     def put(path: Path, key: str, size: int) -> int:
-        s3.put_object(Bucket=bucket, Key=key, Body=path.read_bytes())
+        try:
+            s3.put_object(Bucket=bucket, Key=key, Body=path.read_bytes())
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code", "unknown")
+            message = f"upload failed for {key}: {code}"
+            log.error(message)  # visible even when the traceback gets truncated
+            if code in CREDENTIAL_ERROR_CODES:
+                raise CredentialError(
+                    f"{message} — credentials expired: run `source-coop login` "
+                    "(or refresh creds.json), then re-run publish to resume"
+                ) from None
+            raise RuntimeError(message) from None
         return size
 
-    pool = ThreadPoolExecutor(max_workers=workers)
-    with tqdm(total=total_bytes, desc="uploading store", unit="B", unit_scale=True, unit_divisor=1024) as bar:
-        futures = [pool.submit(put, *u) for u in uploads]
+    def upload_round(uploads: list[tuple[Path, str, int]]) -> None:
+        total_bytes = sum(size for _, _, size in uploads)
+        pool = ThreadPoolExecutor(max_workers=workers)
+        with tqdm(total=total_bytes, desc="uploading store", unit="B", unit_scale=True, unit_divisor=1024) as bar:
+            futures = [pool.submit(put, *u) for u in uploads]
+            try:
+                for future in as_completed(futures):
+                    bar.update(future.result())
+            except BaseException:
+                # drop the queued uploads instead of draining them; the next
+                # round (or a re-run of publish) resumes from what completed
+                pool.shutdown(wait=False, cancel_futures=True)
+                raise
+            pool.shutdown()
+
+    total_files = sum(1 for p in local_store.rglob("*") if p.is_file()) - 1
+    failed_rounds = 0
+    while True:
+        uploads = plan_uploads(local_store, remote, prefix)
+        if not uploads:
+            break
+        log.info(
+            "uploading %d files (%.1f GB) to s3://%s/%s (%d already up to date)",
+            len(uploads),
+            sum(s for _, _, s in uploads) / 1e9,
+            bucket,
+            prefix,
+            total_files - len(uploads),
+        )
         try:
-            for future in as_completed(futures):
-                bar.update(future.result())
-        except BaseException:
-            # fail fast: drop the queued uploads instead of draining them
-            # (re-running publish resumes from whatever completed)
-            pool.shutdown(wait=False, cancel_futures=True)
-            raise
-        pool.shutdown()
+            upload_round(uploads)
+            break
+        except CredentialError:
+            raise  # needs a human; re-running publish resumes
+        except RuntimeError as exc:
+            failed_rounds += 1
+            if failed_rounds >= MAX_UPLOAD_ROUNDS:
+                raise
+            log.warning(
+                "upload round failed (%s); re-listing remote and resuming (attempt %d/%d)",
+                exc,
+                failed_rounds + 1,
+                MAX_UPLOAD_ROUNDS,
+            )
+            remote = _remote_sizes(s3, bucket, f"{prefix}/")
 
     log.info("uploading mutable '%s' pointer last", REPO_POINTER)
     put(local_store / REPO_POINTER, f"{prefix}/{REPO_POINTER}", 0)

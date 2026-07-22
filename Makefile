@@ -26,20 +26,21 @@ ifeq ($(ACCOUNT),)
 else
   STORE_FLAGS = --source-coop-account $(ACCOUNT)
 endif
-ifneq ($(CREDS_FILE),)
-  STORE_FLAGS += --credentials-file $(CREDS_FILE)
-endif
+STORE_FLAGS += $(CREDS_FLAG)
 YEARS_FLAG     = $(if $(YEARS),--years $(YEARS))
 CLEANUP_FLAG   = $(if $(CLEANUP),--cleanup)
 OVERWRITE_FLAG = $(if $(OVERWRITE),--overwrite)
 WORKERS_FLAG   = $(if $(WORKERS),--workers $(WORKERS))
+# only pass a creds file when explicitly requested; otherwise the source-coop
+# CLI's cached login is used (a stale creds.json must not shadow a fresh login)
+CREDS_FLAG     = $(if $(CREDS_FILE),--credentials-file $(CREDS_FILE))
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup test lint init-store ingest backfill-30m backfill-10m validate info publish clean
+.PHONY: help setup test lint init-store ingest backfill-30m backfill-10m validate info publish clean-local-store clean-local-data
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[1m%-14s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[1m%-18s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "  Variables: STORE=$(STORE)  ACCOUNT=$(ACCOUNT)  RESOLUTION=$(RESOLUTION)"
 	@echo "             YEARS=$(YEARS)  WORKERS=$(WORKERS)  DATA_DIR=$(DATA_DIR)"
@@ -76,7 +77,10 @@ info: ## Show store structure, tags, and recent snapshots
 
 publish: ## Sync the locally built store to Source Coop; OVERWRITE=1 wipes the remote store first
 	$(CLI) publish --store $(STORE) --source-coop-account $(or $(ACCOUNT),chill) \
-		--credentials-file $(or $(CREDS_FILE),creds.json) $(WORKERS_FLAG) $(OVERWRITE_FLAG)
+		$(CREDS_FLAG) $(WORKERS_FLAG) $(OVERWRITE_FLAG)
 
-clean: ## Remove the local dev store
+clean-local-store: ## Remove the local icechunk store ($(STORE))
 	rm -rf $(STORE)
+
+clean-local-data: ## Remove downloaded/extracted source files ($(DATA_DIR))
+	rm -rf $(DATA_DIR)

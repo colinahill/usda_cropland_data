@@ -9,7 +9,7 @@ The store has two groups, one per spatial resolution:
 | group | variable | years | grid (y × x) | source |
 |---|---|---|---|---|
 | `30m` | `crop_type (year, y, x) uint8` | 2008–2025 | 105,432 × 160,171 | national 30 m zips (2024+ are resampled from the native 10 m CDL) |
-| `10m` | `crop_type (year, y, x) uint8` | 2024–2025 | 316,296 × 480,513 | native 10 m national zips |
+| `10m` | `crop_type (year, y, x) uint8` | 2024–2025 | 316,295 × 480,509 | native 10 m national zips |
 
 Both grids are EPSG:5070 (CONUS Albers Equal Area), pixel-centre coordinates, fill value
 `0` = Background. Class codes, names, and official colors are embedded in the
@@ -116,8 +116,7 @@ tests/              # synthetic-raster integration tests
 - **Grid extents vary by year.** The 2025 30m file is larger than the 2008–2024 grid;
   the canonical grids in `config.py` are unions. If NASS expands the extent again,
   `ingest` fails with instructions rather than writing misaligned data.
-- The 10m canonical grid is provisional: verified against the 2024 FGDC metadata and the
-  2025 30m footprint; the first real 10m ingest asserts it.
+- Both canonical grids are verified against the actual source GeoTIFFs.
 - Code `0` (Background) is the fill value and marks "outside this year's classified
   extent"; code `81` (Clouds/No Data) is a real class inside the classified extent.
 - `crop_type` deliberately has no `missing_value`/`_FillValue` attr so xarray keeps the
