@@ -36,6 +36,7 @@ make validate RESOLUTION=30m YEARS=2025  # verify store pixels against the sourc
 make info                                # show store structure, tags, and recent snapshots
 make backfill-30m                        # ingest all 30m years 2008-2025
 make backfill-10m                        # ingest 2024-2025 (add CLEANUP=1 to delete the ~10 GB sources as it goes)
+make overviews RESOLUTION=10m            # build multiscale pyramid levels (mode-resampled from native)
 ```
 
 Target a different store with `STORE=s3://bucket/prefix` or the Source Coop product with
@@ -56,8 +57,12 @@ thread pool, and makes **one icechunk commit per year** tagged `{resolution}-{ye
 The arrays use zarr v3 sharding: inner chunks `(1, 512, 512)` (~39 KB compressed — cheap
 field/point reads via range requests) packed into `(1, 8192, 8192)` shards (~260 storage
 objects per 30m year). See `EncodingSpec` in `usda_cdl/config.py`.
-Re-running a year is idempotent. `--cleanup` deletes source files after each year
-(useful for the ~9–10 GB 10m zips).
+
+`overviews` adds [zarr multiscales](https://github.com/zarr-conventions/multiscales)
+pyramid levels as child groups (`10m/2x` … `10m/512x`, `30m/2x` … `30m/256x`; 2× per level), 
+block-**mode** resampled from the native array. Re-running a year is idempotent. 
+
+`--cleanup` deletes source files after each year.
 
 ## Publishing to Source Coop
 
@@ -104,6 +109,7 @@ src/usda_cdl/
   template.py   # empty store structure (groups, coords, arrays)
   ingest.py     # windowed read -> shard-aligned zarr writes (no commit; caller owns the session)
   store.py      # icechunk storage factory (local / s3 / source coop, refreshable creds)
+  overviews.py  # multiscale pyramids: GeoZarr multiscales attrs + block-mode generation
   validate.py   # pixel-equality sampling vs source, structure checks
   cli.py        # typer CLI
   cdl_classes.json  # bundled class table (extracted from the 2025 VAT)

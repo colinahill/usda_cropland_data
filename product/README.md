@@ -26,6 +26,11 @@ One Icechunk repository at `v0.1.0.icechunk/` with two groups:
   attributes and icechunk commit metadata; each year is tagged (e.g. `30m-2025`).
 - Storage layout: zarr v3 sharded arrays with `(1, 512, 512)` inner chunks — a
   field-scale or point query fetches only ~tens of KB per year via range requests.
+- Multiscale overviews ([zarr multiscales](https://github.com/zarr-conventions/multiscales)
+  convention): each group carries a 2×-per-level pyramid in child groups
+  (`10m/2x` … `10m/512x`, `30m/2x` … `30m/256x`), block-**majority** (mode) resampled
+  from the native array. For a quick national map, read a coarse level (e.g.
+  `group="30m/32x"` ≈ 960 m pixels) instead of the full-resolution array.
 
 ## Reading the data
 

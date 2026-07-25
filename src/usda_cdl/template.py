@@ -17,8 +17,14 @@ from . import config, metadata
 from .config import Resolution
 
 
-def coords_dataset(resolution: Resolution) -> xr.Dataset:
-    grid = config.GRIDS[resolution]
+def coords_dataset(
+    resolution: Resolution,
+    grid: config.GridSpec | None = None,
+    group_attrs: dict | None = None,
+) -> xr.Dataset:
+    """Coordinate-only dataset for a group; pass ``grid``/``group_attrs`` for overview levels."""
+    if grid is None:
+        grid = config.GRIDS[resolution]
     coord_attrs = metadata.coordinate_attrs()
     ds = xr.Dataset(
         coords={
@@ -32,7 +38,7 @@ def coords_dataset(resolution: Resolution) -> xr.Dataset:
             "spatial_ref": ((), np.int64(0), metadata.spatial_ref_attrs(grid)),
         },
     )
-    ds.attrs = config.group_attrs(resolution)
+    ds.attrs = config.group_attrs(resolution) if group_attrs is None else group_attrs
     return ds
 
 

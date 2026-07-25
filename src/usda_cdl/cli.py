@@ -19,8 +19,9 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+import zarr
 
-from . import catalog, download, ingest, store, template
+from . import catalog, config, download, ingest, store, template
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
@@ -228,6 +229,43 @@ def validate(
     if failures:
         raise typer.Exit(code=1)
     log.info("all validations passed")
+
+
+@app.command()
+def overviews(
+    store_uri: StoreOpt = None,
+    account: AccountOpt = None,
+    credentials_file: CredsOpt = None,
+    resolution: Annotated[str, typer.Option()] = "10m",
+    years: Annotated[str, typer.Option(help="default: all years in the store")] = "",
+    workers: Annotated[int, typer.Option()] = 8,
+    overwrite: Annotated[bool, typer.Option("--overwrite", help="regenerate years already done")] = False,
+):
+    """Build multiscale overview pyramids (mode-resampled from native; additive)."""
+    from . import overviews as overviews_mod
+
+    storage = _resolve_storage(store_uri, account, credentials_file, writable=True)
+    repo = store.open_repo(storage)
+
+    session = repo.writable_session("main")
+    if not overviews_mod.overviews_initialized(session, resolution):  # type: ignore[arg-type]
+        overviews_mod.init_overviews(session, resolution)  # type: ignore[arg-type]
+        factors = config.OVERVIEW_FACTORS[resolution]  # type: ignore[index]
+        snapshot = session.commit(f"Initialize {resolution} overview levels {factors}")
+        log.info("initialized %s overview structure at %s", resolution, snapshot)
+
+    year_list = catalog.parse_years(years) if years else config.YEARS[resolution]  # type: ignore[index]
+    for year in year_list:
+        session = repo.writable_session("main")
+        group = zarr.open_group(session.store, path=resolution, mode="r+")
+        done = list(group.attrs.get("overview_years", []))
+        if year in done and not overwrite:
+            log.info("%s %s overviews already generated; skipping (--overwrite to redo)", resolution, year)
+            continue
+        stats = overviews_mod.generate_year(session, resolution, year, workers=workers)  # type: ignore[arg-type]
+        group.attrs["overview_years"] = sorted({*done, year})
+        snapshot = session.commit(f"Overviews {resolution} {year}", metadata=stats)
+        log.info("committed %s %s overviews as %s", resolution, year, snapshot)
 
 
 @app.command()
