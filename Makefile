@@ -37,7 +37,7 @@ CREDS_FLAG     = $(if $(CREDS_FILE),--credentials-file $(CREDS_FILE))
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup test lint init-store ingest backfill-30m backfill-10m validate info publish clean-local-store clean-local-data
+.PHONY: help setup test lint init-store ingest backfill-30m backfill-10m overviews validate info publish clean-local-store clean-local-data
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[1m%-18s\033[0m %s\n", $$1, $$2}'
@@ -67,6 +67,9 @@ backfill-30m: ## Ingest all 30m years (2008-2025); CLEANUP=1 to delete sources a
 
 backfill-10m: ## Ingest all 10m years (2024-2025); CLEANUP=1 to delete the ~10 GB sources as it goes
 	$(CLI) ingest $(STORE_FLAGS) --resolution 10m --data-dir $(DATA_DIR) $(WORKERS_FLAG) $(CLEANUP_FLAG) $(OVERWRITE_FLAG)
+
+overviews: ## Build multiscale overview pyramids: make overviews RESOLUTION=10m [YEARS=...]
+	$(CLI) overviews $(STORE_FLAGS) --resolution $(RESOLUTION) $(YEARS_FLAG) $(WORKERS_FLAG) $(OVERWRITE_FLAG)
 
 validate: ## Verify store contents against source rasters
 	$(CLI) validate $(STORE_FLAGS) --resolution $(RESOLUTION) $(YEARS_FLAG) \

@@ -100,6 +100,16 @@ GRID_10M = GridSpec(
 
 GRIDS: dict[Resolution, GridSpec] = {"30m": GRID_30M, "10m": GRID_10M}
 
+# Multiscale overview pyramids (zarr-conventions/multiscales, parent/child
+# layout): each factor F gets a subgroup "{F}x" holding crop_type mode-resampled
+# by FxF blocks from native. 2x per level down to roughly one-screen extent.
+# Mode is non-composable: every level is always computed from native data.
+OVERVIEW_FACTORS: dict[Resolution, list[int]] = {
+    "30m": [2, 4, 8, 16, 32, 64, 128, 256],
+    "10m": [2, 4, 8, 16, 32, 64, 128, 256, 512],
+}
+OVERVIEW_RESAMPLING = "mode"
+
 # National GeoTIFF zips exist for these product years.
 YEARS: dict[Resolution, list[int]] = {
     "30m": list(range(2008, 2026)),
