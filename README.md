@@ -88,8 +88,9 @@ make publish ACCOUNT=chill CREDS_FILE=creds.json
 make validate ACCOUNT=chill RESOLUTION=30m  # reads back through data.source.coop
 ```
 
-4. Upload `product/README.md` to the product root, verify the anonymous read snippet in
-   that README works, then set the product to **Listed**.
+4. `publish` also uploads `product/README.md` to the product root (the landing page).
+   Verify the anonymous read snippet in that README works, then set the product to
+   **Listed**.
 
 Yearly updates are the same flow: ingest the new year locally, `make publish` again —
 sync only uploads the new objects.
