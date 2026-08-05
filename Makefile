@@ -1,12 +1,14 @@
 # USDA CDL -> Icechunk Zarr pipeline
 #
-# Store target: set STORE to a local path / s3://bucket/prefix (default
-# ./cdl_store_local), or set ACCOUNT to target the Source Coop product instead.
+# Store target: set ACCOUNT to commit directly into the Source Coop product, or
+# leave it unset to use STORE (a local path / s3://bucket/prefix, default
+# ./cdl_store_local) - so a bare `make ingest` never touches the published store.
 #
-#   make init-store
-#   make ingest RESOLUTION=30m YEARS=2025
-#   make backfill-30m ACCOUNT=my-account
-#   make validate RESOLUTION=30m YEARS=2025
+#   make init-store ACCOUNT=chill
+#   make ingest ACCOUNT=chill RESOLUTION=30m YEARS=2025
+#   make backfill-30m ACCOUNT=chill
+#   make validate ACCOUNT=chill RESOLUTION=30m YEARS=2025
+#   make ingest RESOLUTION=30m YEARS=2025           # local dev store
 
 STORE      ?= ./cdl_store_local
 ACCOUNT    ?=
@@ -37,7 +39,8 @@ CREDS_FLAG     = $(if $(CREDS_FILE),--credentials-file $(CREDS_FILE))
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup test lint init-store ingest backfill-30m backfill-10m overviews validate info publish clean-local-store clean-local-data
+.PHONY: help setup test lint init-store ingest backfill-30m backfill-10m overviews validate info \
+	publish-readme clean-local-store clean-local-data clean-remote-store
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[1m%-18s\033[0m %s\n", $$1, $$2}'
@@ -78,12 +81,14 @@ validate: ## Verify store contents against source rasters
 info: ## Show store structure, tags, and recent snapshots
 	$(CLI) info $(STORE_FLAGS)
 
-publish: ## Sync the locally built store to Source Coop; OVERWRITE=1 wipes the remote store first
-	$(CLI) publish --store $(STORE) --source-coop-account $(or $(ACCOUNT),chill) \
-		$(CREDS_FLAG) $(WORKERS_FLAG) $(OVERWRITE_FLAG)
+publish-readme: ## Upload product/README.md as the Source Coop landing page
+	$(CLI) publish-readme --source-coop-account $(or $(ACCOUNT),chill) $(CREDS_FLAG)
 
 clean-local-store: ## Remove the local icechunk store ($(STORE))
 	rm -rf $(STORE)
 
 clean-local-data: ## Remove downloaded/extracted source files ($(DATA_DIR))
 	rm -rf $(DATA_DIR)
+
+clean-remote-store: ## DESTRUCTIVE: delete the published store (data, history, tags); confirms twice
+	$(CLI) clean-remote-store --source-coop-account $(or $(ACCOUNT),chill) $(CREDS_FLAG) $(WORKERS_FLAG)

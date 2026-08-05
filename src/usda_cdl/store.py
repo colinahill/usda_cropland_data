@@ -1,15 +1,15 @@
 """Icechunk storage/repository helpers.
 
-Supported store targets:
+Supported store targets, all readable and writable:
 - local path (development / staging)
 - any ``s3://bucket/prefix`` (uses the standard AWS credential chain)
 - Source Cooperative product prefix (helper that fills in the well-known bucket)
 
-Source Coop writes use temporary scoped STS credentials issued from the product
-page. Export them as env vars (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
-AWS_SESSION_TOKEN) and ``from_env=True`` picks them up; for jobs that outlive
-one credential set, pass ``credentials_file`` pointing at a JSON file you can
-refresh out-of-band - it is re-read whenever icechunk asks for credentials.
+Source Coop access uses temporary scoped STS credentials, from the ``source-coop``
+CLI's cached login or the product page's JSON export. ``get_credentials`` re-reads
+them on every icechunk refresh, so a multi-hour backfill survives credential
+rotation; ``from_env=True`` (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
+AWS_SESSION_TOKEN) is the fallback when neither source is available.
 """
 
 from __future__ import annotations
@@ -28,12 +28,6 @@ from . import config
 # product name. These values (and the region) come from the product's
 # credentials page - that page is the ground truth if they ever change.
 # See https://docs.source.coop/data-upload
-#
-# NOTE (verified 2026-07-21): data.source.coop supports plain GET/PUT/DELETE but
-# NOT S3 CopyObject (and it ignores If-Match preconditions), so icechunk commits
-# fail against it with "service error" at update_repo_info. Reads work fine.
-# Publishing therefore builds the store locally and syncs it up with
-# `usda-cdl publish` (immutable files first, mutable "repo" pointer last).
 SOURCE_COOP_ENDPOINT = "https://data.source.coop"
 SOURCE_COOP_REGION = "us-east-1"
 SOURCE_COOP_ACCOUNT = "chill"
