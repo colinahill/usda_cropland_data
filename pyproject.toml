@@ -1,6 +1,6 @@
 [project]
 name = "usda-cropland-data"
-version = "0.1.0"
+version = "0.1.1"
 description = "End-to-end pipeline: USDA NASS Cropland Data Layer -> Icechunk Zarr store on Source Cooperative"
 license = "MIT"
 license-files = ["LICENSE"]
