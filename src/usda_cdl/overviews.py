@@ -3,8 +3,9 @@
 Layout (parent/child model, matching the Earthmover reference implementation):
 the native arrays stay untouched in the resolution group, which gains
 ``multiscales`` metadata; each downsample factor F gets a child group ``{F}x``
-with its own coords and a mode-resampled crop_type. Everything is additive -
-no existing data is rewritten, and publishing remains incremental.
+with its own coords and a mode-resampled crop_type. Everything is additive - no
+existing data is rewritten, so retrofitting a pyramid onto a published store
+costs only the new levels' objects.
 
 Resampling is exact block **mode** (majority), matching NASS's own practice for
 deriving 30m from 10m. Mode is NOT composable, so every level is computed from

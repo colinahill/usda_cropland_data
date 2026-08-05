@@ -39,9 +39,11 @@ make backfill-10m                        # ingest 2024-2025 (add CLEANUP=1 to de
 make overviews RESOLUTION=10m            # build multiscale pyramid levels (mode-resampled from native)
 ```
 
-Target a different store with `STORE=s3://bucket/prefix` or the Source Coop product with
-`ACCOUNT=chill` (the Source Coop account). The underlying CLI is available directly as
-`uv run usda-cdl`:
+Every target takes `ACCOUNT=chill` to commit **directly into the published Source Coop
+store** (see below), or `STORE=<local path|s3://bucket/prefix>` for anywhere else.
+`STORE` defaults to `./cdl_store_local`, so a bare `make ingest` writes to a local dev
+store and can never touch the published product by accident. The underlying CLI is
+available directly as `uv run usda-cdl`:
 
 ```bash
 uv run usda-cdl init-store --store ./cdl_store_local
@@ -68,32 +70,47 @@ block-**mode** resampled from the native array. Re-running a year is idempotent.
 
 See the official [data upload docs](https://docs.source.coop/data-upload).
 
-The Source Coop endpoint (`data.source.coop`) does not support S3 server-side copy,
-which icechunk commits require — so the store is **built locally, then synced up**
-(`make publish` uploads the immutable files first and the mutable `repo` pointer
-last, so readers always see a consistent version; `OVERWRITE=1` wipes the remote
-store first, for use after a local rebuild).
+Ingest **commits directly into the remote store**: pass `ACCOUNT=chill` and each year is
+one icechunk commit against the published product. Interrupt anything and no commit
+lands, so readers only ever see complete versions.
 
 1. Create the data product `usda-cropland-data-layer` on [source.coop](https://source.coop).
 2. Authenticate with the [source-coop CLI](https://github.com/source-cooperative/source-coop-cli)
    (`brew install source-cooperative/tap/source-coop`, then `source-coop login` — browser
-   OAuth, credentials cached in the OS keyring and picked up automatically). Alternative:
-   save the product page's JSON credential export as `creds.json` (gitignored); an
-   existing `creds.json` takes precedence.
-3. Build locally and publish:
+   OAuth, credentials cached in the OS keyring and picked up automatically; icechunk
+   re-reads them on every refresh, so multi-hour backfills survive credential rotation).
+   Alternative: save the product page's JSON credential export as `creds.json`
+   (gitignored) and pass `CREDS_FILE=creds.json`.
+3. Ingest and validate against the product:
 
 ```bash
-make init-store backfill-30m backfill-10m   # build the full local store
-make publish ACCOUNT=chill CREDS_FILE=creds.json
-make validate ACCOUNT=chill RESOLUTION=30m  # reads back through data.source.coop
+make init-store ACCOUNT=chill                   # once per version path
+make backfill-30m ACCOUNT=chill                 # each year: download -> write -> commit -> tag
+make backfill-10m ACCOUNT=chill CLEANUP=1
+make overviews ACCOUNT=chill RESOLUTION=30m
+make validate ACCOUNT=chill RESOLUTION=30m      # reads back through data.source.coop
 ```
 
-4. `publish` also uploads `product/README.md` to the product root (the landing page).
-   Verify the anonymous read snippet in that README works, then set the product to
-   **Listed**.
+4. `make publish-readme ACCOUNT=chill` uploads `product/README.md` to the product root
+   (the landing page, which sits outside the store prefix). Verify the anonymous read
+   snippet in that README works, then set the product to **Listed**.
 
-Yearly updates are the same flow: ingest the new year locally, `make publish` again —
-sync only uploads the new objects.
+Yearly updates: `make ingest ACCOUNT=chill RESOLUTION=30m YEARS=<year>`. Commits are
+additive, so an update only writes the new year's objects.
+
+Remote writes are network-bound: measured ~58 MiB/s of raw pixels at both 2 and 8
+writer threads, i.e. roughly 5 minutes for a 30m year and ~45 minutes for a 10m year
+(versus ~13 s to a local store). `WORKERS=8` is a reasonable default.
+
+`make clean-remote-store` deletes every object under the remote store prefix — data,
+snapshot history, and tags. It exists only for abandoning a version path, asks for two
+separate confirmations, and refuses to run non-interactively. Normal operation never
+needs it.
+
+For a staging run, build locally first (`make init-store ingest`, default
+`STORE=./cdl_store_local`) and inspect it with `make info` / `make validate`. A local
+store is only ever a staging target — nothing copies one up to the product, so the
+remote store is the source of truth for published data.
 
 ## Reading the published dataset
 
@@ -110,6 +127,7 @@ src/usda_cdl/
   template.py   # empty store structure (groups, coords, arrays)
   ingest.py     # windowed read -> shard-aligned zarr writes (no commit; caller owns the session)
   store.py      # icechunk storage factory (local / s3 / source coop, refreshable creds)
+  remote.py     # the plain-S3 bits icechunk doesn't cover: landing-page README, store wipe
   overviews.py  # multiscale pyramids: GeoZarr multiscales attrs + block-mode generation
   validate.py   # pixel-equality sampling vs source, structure checks
   cli.py        # typer CLI

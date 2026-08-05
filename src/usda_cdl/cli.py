@@ -1,14 +1,14 @@
 """Command-line interface.
 
 Examples:
-    # local development store
-    usda-cdl init-store --store ./cdl_store
-    usda-cdl ingest --store ./cdl_store --resolution 30m --years 2025 --workers 8
-
-    # Source Coop (export the product's temporary credentials first)
+    # Source Coop product (`source-coop login` first, or pass --credentials-file)
     usda-cdl init-store --source-coop-account my-account
     usda-cdl ingest --source-coop-account my-account --resolution 30m --years 2008-2025
     usda-cdl validate --source-coop-account my-account --resolution 30m --years 2025
+
+    # local development store
+    usda-cdl init-store --store ./cdl_store
+    usda-cdl ingest --store ./cdl_store --resolution 30m --years 2025 --workers 8
 """
 
 from __future__ import annotations
@@ -44,19 +44,10 @@ CredsOpt = Annotated[
 ]
 
 
-def _resolve_storage(
-    store_uri: str | None, account: str | None, credentials_file: str | None, *, writable: bool = False
-):
+def _resolve_storage(store_uri: str | None, account: str | None, credentials_file: str | None):
     if bool(store_uri) == bool(account):
         raise typer.BadParameter("provide exactly one of --store or --source-coop-account")
     if account:
-        if writable:
-            # data.source.coop does not support S3 CopyObject, which icechunk
-            # commits require - direct writes fail at commit time.
-            raise typer.BadParameter(
-                "The Source Coop endpoint does not support icechunk commits. "
-                "Build the store locally (--store ./cdl_store_local) and upload it with `make publish`."
-            )
         log.info("store: source coop s3://%s/%s/%s", account, store.PRODUCT_NAME, store.STORE_SUBPATH)
         return store.source_coop_storage(account, credentials_file=credentials_file)
     log.info("store: %s", store_uri)
@@ -71,7 +62,7 @@ def init_store(
     resolutions: Annotated[str, typer.Option(help="comma-separated groups")] = "30m,10m",
 ):
     """Create the icechunk repo and empty group structure."""
-    storage = _resolve_storage(store_uri, account, credentials_file, writable=True)
+    storage = _resolve_storage(store_uri, account, credentials_file)
     repo = store.open_repo(storage, create=True)
     session = repo.writable_session("main")
     res_list = [r.strip() for r in resolutions.split(",")]
@@ -99,7 +90,7 @@ def ingest_cmd(
     --overwrite is passed (a re-ingest commits new data and tags it with a
     -rN suffix; existing tags are immutable and keep their snapshots).
     """
-    storage = _resolve_storage(store_uri, account, credentials_file, writable=True)
+    storage = _resolve_storage(store_uri, account, credentials_file)
     repo = store.open_repo(storage)
     year_list = catalog.parse_years(years) if years else None
     sources = catalog.source_files(resolution, year_list)  # type: ignore[arg-type]
@@ -244,7 +235,7 @@ def overviews(
     """Build multiscale overview pyramids (mode-resampled from native; additive)."""
     from . import overviews as overviews_mod
 
-    storage = _resolve_storage(store_uri, account, credentials_file, writable=True)
+    storage = _resolve_storage(store_uri, account, credentials_file)
     repo = store.open_repo(storage)
 
     session = repo.writable_session("main")
@@ -269,23 +260,49 @@ def overviews(
 
 
 @app.command()
-def publish(
-    store_uri: Annotated[str, typer.Option("--store", help="local icechunk store directory")] = "./cdl_store_local",
+def publish_readme(
     account: Annotated[str, typer.Option("--source-coop-account")] = store.SOURCE_COOP_ACCOUNT,
     credentials_file: CredsOpt = None,
-    overwrite: Annotated[bool, typer.Option("--overwrite", help="wipe the remote store before uploading")] = False,
-    workers: Annotated[int, typer.Option(help="parallel uploads; lower if the proxy stalls")] = 4,
 ):
-    """Sync the locally built store to the Source Coop product (repo pointer last)."""
-    from . import publish as publish_mod
+    """Upload product/README.md to the product root (the Source Coop landing page)."""
+    from . import remote
 
-    publish_mod.publish(
-        Path(store_uri),
-        account,
-        credentials_file=credentials_file,
-        overwrite=overwrite,
-        workers=workers,
-    )
+    remote.upload_readme(account, credentials_file=credentials_file)
+
+
+@app.command()
+def clean_remote_store(
+    account: Annotated[str, typer.Option("--source-coop-account")] = store.SOURCE_COOP_ACCOUNT,
+    credentials_file: CredsOpt = None,
+    workers: Annotated[int, typer.Option(help="parallel deletes")] = 8,
+):
+    """DESTRUCTIVE: delete every object in the remote store prefix.
+
+    Only needed to abandon a version path - ingesting a year is additive and
+    never requires this. Asks for two confirmations, interactive terminal only.
+    """
+    from . import remote
+
+    prefix = f"s3://{account}/{store.PRODUCT_NAME}/{store.STORE_SUBPATH}"
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        raise typer.BadParameter(f"clean-remote-store refuses to run non-interactively (target {prefix})")
+
+    s3 = remote.client(credentials_file)
+    keys, total = remote.store_keys(account, s3=s3)
+    if not keys:
+        log.info("%s is already empty", prefix)
+        return
+
+    typer.echo(f"\nTarget: {prefix}\n  {len(keys)} objects, {total / 1e9:.2f} GB")
+    typer.echo("This deletes the published store: all data, snapshot history, and tags.\n")
+    if not typer.confirm(f"Delete all {len(keys)} objects under {prefix}?"):
+        raise typer.Abort
+    if typer.prompt("Confirm again by typing the store path exactly") != prefix:
+        typer.echo("path did not match; nothing deleted")
+        raise typer.Abort
+
+    remote.delete_keys(account, keys, workers=workers, s3=s3)
+    log.info("deleted %d objects under %s", len(keys), prefix)
 
 
 @app.command()
