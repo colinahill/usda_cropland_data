@@ -47,7 +47,7 @@ storage = icechunk.s3_storage(
 )
 repo = icechunk.Repository.open(storage)
 session = repo.readonly_session("main")
-ds = xr.open_zarr(session.store, group="30m")
+ds = xr.open_zarr(session.store, group="30m", chunks=None)
 ```
 
 Select an area of interest in projected coordinates (or transform lon/lat with pyproj),
